@@ -13,6 +13,7 @@ src/models/saved_emotion_model/
 src/models/saved_*/
 checkpoints/
 runs/
+.hf_cache/
 
 # Local secrets and editor files
 .env
