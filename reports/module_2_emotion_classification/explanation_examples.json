@@ -1,0 +1,122 @@
+[
+  {
+    "text": "I feel anxious and overwhelmed and I cannot sleep.",
+    "prediction": {
+      "emotion": "fear",
+      "confidence": 0.9993083477020264
+    },
+    "top_evidence": [
+      {
+        "word": "anxious",
+        "impact": 0.4232
+      },
+      {
+        "word": "feel",
+        "impact": 0.0002
+      },
+      {
+        "word": "overwhelmed",
+        "impact": 0.0001
+      },
+      {
+        "word": "I",
+        "impact": -0.0
+      },
+      {
+        "word": "and",
+        "impact": -0.0
+      },
+      {
+        "word": "and",
+        "impact": -0.0
+      }
+    ]
+  },
+  {
+    "text": "I finally feel hopeful and proud of myself.",
+    "prediction": {
+      "emotion": "joy",
+      "confidence": 0.9997496008872986
+    },
+    "top_evidence": [
+      {
+        "word": "I",
+        "impact": -0.0
+      },
+      {
+        "word": "finally",
+        "impact": 0.0
+      },
+      {
+        "word": "feel",
+        "impact": -0.0
+      },
+      {
+        "word": "hopeful",
+        "impact": 0.0
+      },
+      {
+        "word": "and",
+        "impact": 0.0
+      },
+      {
+        "word": "proud",
+        "impact": 0.0
+      }
+    ]
+  },
+  {
+    "text": "I am really sad because no one listens to me.",
+    "prediction": {
+      "emotion": "sadness",
+      "confidence": 0.9994388222694397
+    },
+    "top_evidence": [
+      {
+        "word": "sad",
+        "impact": 0.9994
+      },
+      {
+        "word": "really",
+        "impact": 0.0077
+      },
+      {
+        "word": "I",
+        "impact": 0.0002
+      },
+      {
+        "word": "me.",
+        "impact": 0.0001
+      },
+      {
+        "word": "am",
+        "impact": 0.0
+      },
+      {
+        "word": "to",
+        "impact": -0.0
+      }
+    ]
+  },
+  {
+    "text": "Amazing we won!",
+    "prediction": {
+      "emotion": "surprise",
+      "confidence": 0.8034693598747253
+    },
+    "top_evidence": [
+      {
+        "word": "Amazing",
+        "impact": 0.8035
+      },
+      {
+        "word": "we",
+        "impact": 0.8035
+      },
+      {
+        "word": "won!",
+        "impact": -0.1771
+      }
+    ]
+  }
+]

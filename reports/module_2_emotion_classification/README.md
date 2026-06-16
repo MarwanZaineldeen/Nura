@@ -1,11 +1,12 @@
 # Module 2 Reports
 
-This folder is populated after running `notebooks/module_2_emotion_training.ipynb` in Colab.
+These files summarize the DistilBERT emotion classifier trained in `notebooks/module_2_emotion_training.ipynb`.
 
-Expected generated files:
+Included reports:
 
 - `metrics_summary.json`
 - `test_classification_report.txt`
 - `test_classification_report.csv`
-- `test_confusion_matrix.csv`
-- `explanation_examples.json`
+- `explanation_examples.json` when explanation outputs are available in the notebook
+
+The notebook also generates `test_confusion_matrix.csv` during a full Colab run. The exact matrix is not reconstructed here unless that generated CSV is copied back from Colab, because the matrix values were not printed in the saved notebook output.

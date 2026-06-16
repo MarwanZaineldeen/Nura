@@ -1,0 +1,30 @@
+{
+  "base_model": "distilbert-base-uncased",
+  "dataset": "dair-ai/emotion",
+  "labels": [
+    "sadness",
+    "joy",
+    "love",
+    "anger",
+    "fear",
+    "surprise"
+  ],
+  "training": {
+    "epochs": 5,
+    "learning_rate": 2e-05,
+    "train_batch_size": 16,
+    "eval_batch_size": 32,
+    "best_model_metric": "macro_f1"
+  },
+  "validation_metrics": {
+    "eval_loss": 0.1850450038909912,
+    "accuracy": 0.944,
+    "macro_f1": 0.9217609879676768
+  },
+  "test_metrics": {
+    "accuracy": 0.924,
+    "macro_f1": 0.8747072046581201
+  },
+  "explainability_method": "word removal: compare predicted confidence before and after removing each word",
+  "source": "Reconstructed from saved notebook outputs in notebooks/module_2_emotion_training.ipynb"
+}
