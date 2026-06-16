@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -27,8 +28,12 @@ def _load_transformer_stack() -> tuple[Any, Any, Any]:
 class EmotionClassifier:
     """Transformer emotion classifier with confidence and simple word-occlusion explanations."""
 
-    def __init__(self, model_dir: str | Path = DEFAULT_MODEL_DIR) -> None:
-        self.model_dir = Path(model_dir)
+    def __init__(
+        self,
+        model_dir: str | Path | None = None,
+    ) -> None:
+        self.model_dir = Path(model_dir or os.getenv("EMOTION_MODEL_DIR", DEFAULT_MODEL_DIR))
+        self.active_model_source = str(self.model_dir)
         self.torch = None
         self.tokenizer = None
         self.model = None
@@ -46,6 +51,7 @@ class EmotionClassifier:
         self.tokenizer = tokenizer_cls.from_pretrained(self.model_dir)
         self.model = model_cls.from_pretrained(self.model_dir)
         self.model.eval()
+        self.active_model_source = str(self.model_dir)
 
         config_labels = self.model.config.id2label
         self.id2label = {int(key): value for key, value in config_labels.items()}

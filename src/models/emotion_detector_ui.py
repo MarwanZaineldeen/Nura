@@ -30,46 +30,63 @@ CSS = """
     padding: 12px 14px;
     background: #fff1f2;
 }
+.emotion-card {
+    border: 1px solid #d4d4d8;
+    padding: 16px;
+    background: white;
+}
+.emotion-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #0f766e;
+}
 """
 
 
 def model_status() -> str:
-    model_dir = Path(DEFAULT_MODEL_DIR)
+    model_dir = Path(os.getenv("EMOTION_MODEL_DIR", DEFAULT_MODEL_DIR))
     if model_dir.exists():
-        return f"<div class='status-box'>Model ready: <code>{model_dir}</code></div>"
+        return f"<div class='status-box'>Using local trained model: <code>{model_dir}</code></div>"
     return (
-        "<div class='missing-box'>Emotion model is not available locally yet. "
-        "Run the Module 2 Colab notebook, then copy the generated "
-        "<code>saved_emotion_model</code> folder to "
-        f"<code>{model_dir}</code>.</div>"
+        "<div class='missing-box'>Local emotion model is not available at "
+        f"<code>{model_dir}</code>. Copy the trained "
+        "<code>saved_emotion_model</code> folder there, or set "
+        "<code>EMOTION_MODEL_DIR</code> to its current location.</div>"
     )
 
 
-def predict_emotion(text: str) -> tuple[dict, str]:
+def _empty_result(message: str) -> tuple[str, list[list[str | float]], str]:
+    return (
+        f"<div class='missing-box'>{message}</div>",
+        [],
+        model_status(),
+    )
+
+
+def predict_emotion(text: str) -> tuple[str, list[list[str | float]], str]:
+    if not (text or "").strip():
+        return _empty_result("Please enter a message to analyze.")
+
     try:
         result = classifier.explain(text or "", top_k=6)
         emotion = result["prediction"]["emotion"]
         confidence = result["prediction"]["confidence"]
-        status = f"<div class='status-box'>Predicted <b>{emotion}</b> with {confidence:.1%} confidence.</div>"
-        return result, status
+        card = (
+            "<div class='emotion-card'>"
+            "<div>Predicted emotion</div>"
+            f"<div class='emotion-value'>{emotion.title()}</div>"
+            f"<div>Confidence: <b>{confidence:.1%}</b></div>"
+            "</div>"
+        )
+        evidence = [[item["word"], item["impact"]] for item in result["top_evidence"]]
+        status = f"<div class='status-box'>Model source: <code>{classifier.active_model_source}</code></div>"
+        return card, evidence, status
     except FileNotFoundError:
-        return (
-            {
-                "error": "Emotion model not found locally.",
-                "expected_model_path": str(DEFAULT_MODEL_DIR),
-                "next_step": "Run notebooks/module_2_emotion_training.ipynb in Colab and copy src/models/saved_emotion_model back into this project.",
-            },
-            model_status(),
-        )
+        return _empty_result("Local emotion model is not available yet.")
     except ImportError as exc:
-        return (
-            {
-                "error": "Missing Python dependency.",
-                "details": str(exc),
-                "next_step": "Install dependencies with python -m pip install -r requirements.txt.",
-            },
-            "<div class='missing-box'>Missing dependency. Install project requirements.</div>",
-        )
+        return _empty_result(f"Missing dependency: {exc}")
+    except Exception as exc:
+        return _empty_result(f"Emotion analysis is unavailable right now: {exc}")
 
 
 with gr.Blocks(title="Emotion Classifier") as interface:
@@ -91,13 +108,19 @@ with gr.Blocks(title="Emotion Classifier") as interface:
                 )
                 analyze_button = gr.Button("Analyze emotion", variant="primary")
             with gr.Column(scale=4):
-                result_output = gr.JSON(label="Prediction")
+                result_output = gr.HTML(label="Prediction")
+                evidence_output = gr.Dataframe(
+                    headers=["Word", "Impact"],
+                    datatype=["str", "number"],
+                    label="Word Evidence",
+                    interactive=False,
+                )
                 summary_output = gr.HTML()
 
         analyze_button.click(
             fn=predict_emotion,
             inputs=text_input,
-            outputs=[result_output, summary_output],
+            outputs=[result_output, evidence_output, summary_output],
         )
 
 
