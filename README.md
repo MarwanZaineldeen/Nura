@@ -1,120 +1,233 @@
-# RAG-Based Mental Health Support Chatbot
+# Mental Health Support Chatbot
 
-This repository contains the module work for the NLP final project.
+An end-to-end mental-health support chatbot built with a modular NLP and RAG architecture. The system detects the user's language, emotion, and intent, applies safety routing, retrieves relevant mental-health context from a Qdrant vector database, and generates a supportive response through Groq.
 
-## Module 1: Language Detection
+The project is designed to be explainable, testable, and suitable for a professional portfolio: each module can run independently, produces reports, and is integrated into a FastAPI chatbot interface.
 
-The language detector is implemented with traditional NLP:
-
-- Vectorizer: character-level TF-IDF with `char_wb` n-grams from 2 to 4 characters
-- Classifier: Multinomial Naive Bayes
-- Dataset: `papluca/language-identification`
-- Supported languages: Arabic, Bulgarian, German, Greek, English, Spanish, French, Hindi, Italian, Japanese, Dutch, Polish, Portuguese, Russian, Swahili, Thai, Turkish, Urdu, Vietnamese, Chinese
-
-### Train and Evaluate
-
-```bash
-.\.venv\Scripts\python.exe src\models\language_classifier.py
-```
-
-This trains the model, saves it to `src/models/saved_lang_model.pkl`, and writes reports to:
+## What The System Does
 
 ```text
-reports/module_1_language_detection/
+User message
+  -> Language detection
+  -> Emotion classification
+  -> Safety guardrail
+  -> Conversation memory
+  -> Intent classification
+  -> RAG retrieval when needed
+  -> LLM response generation
+  -> Same-language supportive answer
 ```
 
-### Run the UI
+Key features:
 
-```bash
+- Multilingual language detection with confidence scores.
+- Transformer-based emotion classification with word-level explainability.
+- LLM-based intent routing using strict JSON outputs.
+- Crisis-aware guardrail that bypasses normal RAG when urgent risk is detected.
+- RAG retrieval over two mental-health knowledge sources.
+- Qdrant Cloud vector database with source filtering.
+- E5 multilingual embeddings for cross-lingual retrieval.
+- FastAPI backend with production and developer UIs.
+- Short-term conversation memory for recent user context.
+- Clean reports for every major module.
+
+## Modules
+
+### Module 1: Language Detection
+
+- Dataset: `papluca/language-identification`
+- Model: character-level TF-IDF with Multinomial Naive Bayes
+- Supported languages: 20 languages including English, Arabic, French, Spanish, German, Chinese, Japanese, Hindi, Urdu, and others
+- Report folder: `reports/module_1_language_detection/`
+
+Run:
+
+```powershell
+.\.venv\Scripts\python.exe src\data\fetch_language_data.py
+.\.venv\Scripts\python.exe src\models\language_classifier.py
 .\.venv\Scripts\python.exe src\models\language_detector_ui.py
 ```
 
-The UI returns the detected language, confidence, and whether the prediction passed the confidence threshold.
+### Module 2: Emotion Classification
 
-## Module 2: Emotion Classification
-
-The emotion classifier uses a fine-tuned transformer:
-
-- Base model: `distilbert-base-uncased`
 - Dataset: `dair-ai/emotion`
+- Model: fine-tuned `distilbert-base-uncased`
 - Labels: sadness, joy, love, anger, fear, surprise
-- Training target: run on Colab T4 using `notebooks/module_2_emotion_training.ipynb`
+- Explainability: word-occlusion impact scores
+- Report folder: `reports/module_2_emotion_classification/`
 
-DistilBERT is used because it keeps most of BERT's language understanding while being smaller and faster, which makes it a better fit for a student project that needs GPU training but practical local inference.
-
-After training in Colab, the notebook saves:
+The trained model folder is intentionally ignored by Git:
 
 ```text
 src/models/saved_emotion_model/
-reports/module_2_emotion_classification/
 ```
 
-The local inference class returns the predicted emotion, confidence, and a simple word-occlusion explanation showing which words most affected the predicted emotion.
+Run:
 
-### Module Integration Plan
-
-The final chatbot will analyze each user message in this order:
-
-```text
-User message -> Language Detection -> Emotion Classification -> Intent Classification -> RAG/direct response
-```
-
-Module 1 decides the language for routing and response language. Module 2 adds emotional context so later response generation can be gentler for sadness/fear/anger and more direct for neutral informational requests. Crisis handling should still be implemented as a separate safety route later, not inferred from emotion alone.
-
-Run the current Modules 1-3 routing flow:
-
-```bash
-.\.venv\Scripts\python.exe src\models\message_router.py "hi, I feel anxious and cannot sleep"
-```
-
-Run emotion inference after exporting the trained model:
-
-```bash
+```powershell
 .\.venv\Scripts\python.exe src\models\emotion_classifier.py "I feel anxious and overwhelmed" --explain
-```
-
-Run the emotion UI:
-
-```bash
 .\.venv\Scripts\python.exe src\models\emotion_detector_ui.py
 ```
 
-## Module 3: Intent Classification
+### Module 3: Intent Classification
 
-The intent classifier uses few-shot prompting with Groq:
-
-- Model: `llama-3.1-8b-instant`
-- Method: strict JSON classification prompt
+- Model: Groq `llama-3.1-8b-instant`
+- Method: few-shot classification prompt with strict JSON parsing
 - Intents: greeting, goodbye, gratitude, asking_mental_health_question, out_of_scope
+- Report folder: `reports/module_3_intent_classification/`
 
-Set your API key outside Git:
+Run:
 
 ```powershell
-$env:GROQ_API_KEY="your_key_here"
-```
-
-For a local `.env` file, use `.env.example` as a template. The real `.env` file is ignored by Git.
-
-Run intent inference:
-
-```bash
-.\.venv\Scripts\python.exe src\models\intent_classifier.py "hi, I feel anxious and cannot sleep"
-```
-
-Run the intent evaluation report:
-
-```bash
+.\.venv\Scripts\python.exe src\models\intent_classifier.py "I feel anxious every night"
 .\.venv\Scripts\python.exe src\models\intent_classifier.py --evaluate
-```
-
-Run the intent UI:
-
-```bash
 .\.venv\Scripts\python.exe src\models\intent_detector_ui.py
 ```
 
-### Install Dependencies
+### Module 4: RAG Retrieval
 
-```bash
+Knowledge sources:
+
+- `cci`: Centre for Clinical Interventions information sheets, cleaned from PDFs and chunked into overlapping text passages.
+- `amod`: cleaned counseling Q&A pairs from `Amod/mental_health_counseling_conversations`.
+
+Retrieval stack:
+
+- Embedding model: `intfloat/multilingual-e5-base`
+- Vector database: Qdrant Cloud
+- Collection: `mental_health_rag`
+- Retrieval modes:
+  - `both`: Balanced Support
+  - `cci`: Educational Guidance
+  - `amod`: Counseling Style
+
+Build corpora and vector index:
+
+```powershell
+.\.venv\Scripts\python.exe src\retrieval\build_cci_corpus.py
+.\.venv\Scripts\python.exe src\retrieval\build_amod_qa_corpus.py
+.\.venv\Scripts\python.exe src\retrieval\build_vector_index.py --recreate
+```
+
+Test retrieval:
+
+```powershell
+.\.venv\Scripts\python.exe src\retrieval\retrieval_engine.py "I feel anxious and cannot sleep" --source both --top-k 8
+.\.venv\Scripts\python.exe src\retrieval\retrieval_tester_ui.py
+```
+
+## FastAPI Chatbot
+
+Run the integrated chatbot:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn src.api_app:app --host 127.0.0.1 --port 8000
+```
+
+Open:
+
+```text
+http://127.0.0.1:8000
+```
+
+Available pages:
+
+- `/` production chatbot UI
+- `/developer` developer UI with pipeline state
+- `/docs` FastAPI API documentation
+
+API endpoints:
+
+- `GET /health`
+- `POST /chat`
+
+Example request:
+
+```json
+{
+  "message": "I feel anxious every night and cannot sleep",
+  "source": "both",
+  "top_k": 8,
+  "history": []
+}
+```
+
+## Environment Setup
+
+Install dependencies:
+
+```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
+
+Create a local `.env` file from `.env.example`:
+
+```text
+GROQ_API_KEY=your_groq_api_key_here
+QDRANT_URL=https://your-cluster-url.qdrant.tech
+QDRANT_API_KEY=your_qdrant_api_key_here
+QDRANT_COLLECTION=mental_health_rag
+EMBEDDING_MODEL_NAME=intfloat/multilingual-e5-base
+EMBEDDING_BATCH_SIZE=2
+TORCH_NUM_THREADS=1
+```
+
+The real `.env` file is ignored by Git and should never be committed.
+
+## Repository Structure
+
+```text
+src/
+  api_app.py
+  data/
+    fetch_language_data.py
+  models/
+    language_classifier.py
+    emotion_classifier.py
+    intent_classifier.py
+    chatbot_pipeline.py
+    safety_router.py
+    response_generator.py
+  retrieval/
+    build_cci_corpus.py
+    build_amod_qa_corpus.py
+    embedding_model.py
+    build_vector_index.py
+    retrieval_engine.py
+
+notebooks/
+  module_1_language_detection.ipynb
+  module_2_emotion_training.ipynb
+  module_3_intent_classification.ipynb
+  module_4_amod_dataset_exploration.ipynb
+
+reports/
+  module_1_language_detection/
+  module_2_emotion_classification/
+  module_3_intent_classification/
+  module_4_rag_retrieval/
+```
+
+## Reports
+
+Each module writes its own evaluation or data-preparation report:
+
+- Language metrics and confusion matrices.
+- Emotion classification metrics and explanation examples.
+- Intent test cases and accuracy summary.
+- CCI corpus summary, Amod dataset summary, and Qdrant index summary.
+
+These reports make the project easier to review, debug, and present.
+
+## Deployment Notes
+
+The current app runs locally through FastAPI and can be prepared for Hugging Face Spaces. For deployment:
+
+- Store API keys as platform secrets, not in code.
+- Keep trained model artifacts outside Git or upload them to a model host.
+- Rebuild or connect to the Qdrant collection during setup.
+- Keep the production UI at `/` and the developer UI at `/developer`.
+
+## Safety Note
+
+This chatbot is for educational and supportive use only. It does not diagnose, replace therapy, prescribe treatment, or handle emergencies as a clinical service. Crisis-like messages are routed to immediate-support guidance and should encourage contacting local emergency services or crisis resources.

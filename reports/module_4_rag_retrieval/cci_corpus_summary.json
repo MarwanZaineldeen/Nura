@@ -1,0 +1,45 @@
+{
+  "source": "Centre for Clinical Interventions",
+  "source_document_count": 161,
+  "chunk_count": 901,
+  "chunk_size_characters": 1000,
+  "chunk_overlap_characters": 50,
+  "topic_counts": {
+    "Anxiety": 134,
+    "Bipolar": 118,
+    "Body Dysmorphia": 5,
+    "Depression": 85,
+    "Distress Intolerance": 10,
+    "Eating Disorders": 225,
+    "Health Anxiety": 15,
+    "Panic": 52,
+    "Perfectionism": 29,
+    "Procrastination": 34,
+    "Self Compassion": 5,
+    "Self Esteem": 49,
+    "Sleep": 37,
+    "Social Anxiety": 75,
+    "Worry and Rumination": 28
+  },
+  "sensitivity_counts": {
+    "clinical_sensitive": 348,
+    "general_self_help": 553
+  },
+  "total_words": 129586,
+  "min_words": 20,
+  "max_words": 205,
+  "average_words": 143.82,
+  "output_format": "fixed-size overlapping text chunks",
+  "fields": [
+    "chunk_id",
+    "document_id",
+    "source",
+    "topic",
+    "sensitivity",
+    "document_title",
+    "chunk_index",
+    "chunk_count",
+    "text",
+    "word_count"
+  ]
+}

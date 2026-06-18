@@ -6,6 +6,10 @@ __pycache__/
 
 # Local data generated from public datasets
 data/*.csv
+data/raw/
+data/processed/
+notebooks/data/
+notebooks/reports/
 
 # Trained model artifacts
 src/models/*.pkl
