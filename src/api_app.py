@@ -279,20 +279,19 @@ PRODUCTION_PAGE = r"""
         <h1>Mental Health Assistant</h1>
       </div>
       <div class="mode-group">
-        <button class="mode active" data-source="both"><b>Balanced Support</b><span>Uses educational sheets and counseling examples.</span></button>
-        <button class="mode" data-source="cci"><b>Educational Guidance</b><span>Grounded in structured self-help information sheets.</span></button>
-        <button class="mode" data-source="amod"><b>Counseling Style</b><span>Uses similar counseling Q&A examples.</span></button>
+        <button class="mode active" data-source="both"><b>Balanced Support</b><span>Warm support with practical guidance.</span></button>
+        <button class="mode" data-source="cci"><b>Educational Guidance</b><span>Clear coping ideas and psychoeducation.</span></button>
+        <button class="mode" data-source="amod"><b>Counseling Style</b><span>Reflective, conversation-centered support.</span></button>
       </div>
-      <div class="side-note">The assistant keeps a short memory of the latest conversation turns and uses 8 retrieved passages when RAG is needed.</div>
-      <div class="privacy-note">Short-term memory stays in this browser session and helps the assistant keep context without showing technical details.</div>
+      <div class="side-note">A calm space for emotional support, reflection, and practical next steps.</div>
     </aside>
     <main>
       <div class="topbar">
-        <div><b>Conversation</b><span>Supportive responses with safety guardrails</span></div>
+        <div><b>Conversation</b><span>Talk through what feels heavy, one message at a time</span></div>
         <button class="clear" id="clear">New chat</button>
       </div>
       <div class="chat" id="chat">
-        <div class="bubble assistant">Welcome. I’m here to listen and help you sort through what you’re feeling with calm, practical support 🌿</div>
+        <div class="bubble assistant">Welcome. I’m here with you ❤️. Share what’s on your mind, and we’ll take it one step at a time with calm, practical support.</div>
       </div>
       <div class="composer">
         <div class="composer-inner">
@@ -340,7 +339,7 @@ PRODUCTION_PAGE = r"""
     clear.addEventListener("click", () => {
       history = [];
       chat.innerHTML = "";
-      addBubble("assistant", "New chat started. What would feel helpful to talk through today? 🌿");
+      addBubble("assistant", "New chat started. I’m here with you ❤️. What would feel helpful to talk through today?");
     });
 
     async function submitMessage() {

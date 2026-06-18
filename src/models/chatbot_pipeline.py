@@ -105,7 +105,7 @@ class ChatbotPipeline:
             state["llm_review"] = {"language": {}, "intent": {}}
             state["generation_error"] = str(error)
             response = (
-                "I’m here with you 🌿. I can listen, help you slow things down, and support you with mental-health questions. "
+                "I’m here with you ❤️. I can listen, help you slow things down, and support you with mental-health questions. "
                 "The advanced response generator is not available right now, so please try again shortly. "
                 "If this feels urgent or unsafe, contact local emergency support or someone you trust right away."
             )
