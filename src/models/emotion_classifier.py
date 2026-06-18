@@ -10,6 +10,7 @@ from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MODEL_DIR = PROJECT_ROOT / "src" / "models" / "saved_emotion_model"
+DEFAULT_HF_MODEL_ID = ""
 
 
 def _load_transformer_stack() -> tuple[Any, Any, Any]:
@@ -33,28 +34,37 @@ class EmotionClassifier:
         model_dir: str | Path | None = None,
     ) -> None:
         self.model_dir = Path(model_dir or os.getenv("EMOTION_MODEL_DIR", DEFAULT_MODEL_DIR))
-        self.active_model_source = str(self.model_dir)
+        self.model_id = os.getenv("EMOTION_MODEL_ID", DEFAULT_HF_MODEL_ID).strip()
+        self.active_model_source = str(self.model_dir if self.model_dir.exists() else self.model_id)
         self.torch = None
         self.tokenizer = None
         self.model = None
         self.id2label: dict[int, str] = {}
 
     def load_model(self) -> None:
-        if not self.model_dir.exists():
+        model_source = self._resolve_model_source()
+        if not model_source:
             raise FileNotFoundError(
-                f"Emotion model not found at {self.model_dir}. "
-                "Train it first with notebooks/module_2_emotion_training.ipynb."
+                "Emotion model is not available. Train Module 2 locally, or set "
+                "EMOTION_MODEL_ID to a Hugging Face model repository."
             )
 
         torch, model_cls, tokenizer_cls = _load_transformer_stack()
         self.torch = torch
-        self.tokenizer = tokenizer_cls.from_pretrained(self.model_dir)
-        self.model = model_cls.from_pretrained(self.model_dir)
+        self.tokenizer = tokenizer_cls.from_pretrained(model_source)
+        self.model = model_cls.from_pretrained(model_source)
         self.model.eval()
-        self.active_model_source = str(self.model_dir)
+        self.active_model_source = str(model_source)
 
         config_labels = self.model.config.id2label
         self.id2label = {int(key): value for key, value in config_labels.items()}
+
+    def _resolve_model_source(self) -> str | Path | None:
+        if self.model_dir.exists():
+            return self.model_dir
+        if self.model_id:
+            return self.model_id
+        return None
 
     def _score_text(self, text: str) -> dict[str, Any]:
         if self.model is None or self.tokenizer is None or self.torch is None:

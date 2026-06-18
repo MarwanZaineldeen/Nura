@@ -1,6 +1,7 @@
 from __future__ import annotations
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,7 @@ DATA_DIR = PROJECT_ROOT / "data"
 MODEL_DIR = PROJECT_ROOT / "src" / "models"
 REPORTS_DIR = PROJECT_ROOT / "reports" / "module_1_language_detection"
 DEFAULT_MODEL_PATH = MODEL_DIR / "saved_lang_model.pkl"
+DEFAULT_HF_MODEL_FILENAME = "saved_lang_model.pkl"
 
 LANGUAGE_NAMES = {
     "ar": "Arabic",
@@ -47,10 +49,10 @@ class LanguageDetector:
 
     def __init__(
         self,
-        model_path: str | Path = DEFAULT_MODEL_PATH,
+        model_path: str | Path | None = None,
         confidence_threshold: float = 0.65,
     ) -> None:
-        self.model_path = Path(model_path)
+        self.model_path = Path(model_path or os.getenv("LANGUAGE_MODEL_PATH", DEFAULT_MODEL_PATH))
         self.confidence_threshold = confidence_threshold
         self.pipeline = self._build_pipeline()
 
@@ -191,11 +193,29 @@ class LanguageDetector:
         print(f"Saved evaluation reports to {REPORTS_DIR}")
 
     def load_model(self) -> None:
-        if not self.model_path.exists():
+        model_path = self._resolve_model_path()
+        if not model_path.exists():
             raise FileNotFoundError(
-                f"Model not found at {self.model_path}. Run training first."
+                "Language model is not available. Train Module 1 locally, or set "
+                "LANGUAGE_MODEL_REPO_ID to a Hugging Face model repository."
             )
-        self.pipeline = joblib.load(self.model_path)
+        self.pipeline = joblib.load(model_path)
+
+    def _resolve_model_path(self) -> Path:
+        if self.model_path.exists():
+            return self.model_path
+
+        repo_id = os.getenv("LANGUAGE_MODEL_REPO_ID")
+        if not repo_id:
+            return self.model_path
+
+        filename = os.getenv("LANGUAGE_MODEL_FILENAME", DEFAULT_HF_MODEL_FILENAME)
+        try:
+            from huggingface_hub import hf_hub_download
+        except ImportError as exc:
+            raise ImportError("Install huggingface_hub to load the language model from Hugging Face Hub.") from exc
+
+        return Path(hf_hub_download(repo_id=repo_id, filename=filename))
 
     def predict(self, text: str) -> str:
         return self.predict_with_confidence(text)["language_code"]
@@ -249,7 +269,7 @@ if __name__ == "__main__":
     sample_texts = [
         "I feel anxious and need someone to talk to.",
         "أنا أشعر بالقلق وأحتاج إلى المساعدة.",
-        "Je me sens stresse aujourd'hui.",
+        "Je me sens stressé aujourd'hui.",
     ]
 
     print("\nSample predictions:")

@@ -164,6 +164,9 @@ Create a local `.env` file from `.env.example`:
 
 ```text
 GROQ_API_KEY=your_groq_api_key_here
+LANGUAGE_MODEL_REPO_ID=your_hf_username/language-detector-model
+LANGUAGE_MODEL_FILENAME=saved_lang_model.pkl
+EMOTION_MODEL_ID=your_hf_username/emotion-detector-model
 QDRANT_URL=https://your-cluster-url.qdrant.tech
 QDRANT_API_KEY=your_qdrant_api_key_here
 QDRANT_COLLECTION=mental_health_rag
@@ -221,11 +224,37 @@ These reports make the project easier to review, debug, and present.
 
 ## Deployment Notes
 
-The current app runs locally through FastAPI and can be prepared for Hugging Face Spaces. For deployment:
+The current app runs locally through FastAPI and is prepared for a Hugging Face Docker Space.
 
-- Store API keys as platform secrets, not in code.
-- Keep trained model artifacts outside Git or upload them to a model host.
-- Rebuild or connect to the Qdrant collection during setup.
+See `DEPLOYMENT.md` for the full Hugging Face Spaces checklist.
+
+Recommended Hugging Face Space setup:
+
+1. Create a new Space with `Docker` as the SDK.
+2. Push this repository content to the Space repository.
+3. Add the required secrets in the Space settings:
+
+```text
+GROQ_API_KEY
+QDRANT_URL
+QDRANT_API_KEY
+QDRANT_COLLECTION
+LANGUAGE_MODEL_REPO_ID
+LANGUAGE_MODEL_FILENAME
+EMOTION_MODEL_ID
+```
+
+The Dockerfile runs:
+
+```text
+uvicorn src.api_app:app --host 0.0.0.0 --port 7860
+```
+
+Model artifact policy:
+
+- Upload `saved_lang_model.pkl` to a Hugging Face model repository and set `LANGUAGE_MODEL_REPO_ID`.
+- Upload the trained `saved_emotion_model/` files to another Hugging Face model repository and set `EMOTION_MODEL_ID`.
+- Keep API keys, model secrets, local data, and local caches outside Git.
 - Keep the production UI at `/` and the developer UI at `/developer`.
 
 ## Safety Note
