@@ -43,22 +43,22 @@ CRISIS_RESPONSES = {
 
 GENERIC_REPLIES = {
     "greeting": {
-        "en": "Hi, I'm here with you. Tell me what has been going on.",
+        "en": "Hi, I’m your mental-health support assistant 🌿. Share what has been weighing on you, and I’ll help you sort through it calmly.",
         "fr": "Bonjour, je suis là avec toi. Dis-moi ce qui se passe.",
         "ar": "مرحبًا، أنا معك. أخبرني بما يحدث.",
     },
     "gratitude": {
-        "en": "You're welcome. I'm glad to keep helping if you want to talk more.",
+        "en": "You’re very welcome 🌿. I’m here if you’d like to keep talking or take the next step together.",
         "fr": "Avec plaisir. Je peux continuer à t'aider si tu veux en parler davantage.",
         "ar": "على الرحب والسعة. يمكنني الاستمرار في مساعدتك إذا أردت التحدث أكثر.",
     },
     "goodbye": {
-        "en": "Take care of yourself. I'm here if you need to come back later.",
+        "en": "Take gentle care of yourself 🌿. I’ll be here if you want to come back and talk later.",
         "fr": "Prends soin de toi. Je serai là si tu veux revenir plus tard.",
         "ar": "اعتنِ بنفسك. سأكون هنا إذا احتجت للعودة لاحقًا.",
     },
     "out_of_scope": {
-        "en": "I can help best with mental-health and emotional support questions.",
+        "en": "I’m best at mental-health and emotional support 🌿. If something is affecting your mood, stress, sleep, or relationships, tell me what’s happening.",
         "fr": "Je peux surtout aider avec les questions de santé mentale et de soutien émotionnel.",
         "ar": "يمكنني المساعدة بشكل أفضل في أسئلة الصحة النفسية والدعم العاطفي.",
     },

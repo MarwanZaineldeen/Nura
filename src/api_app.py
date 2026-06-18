@@ -292,7 +292,7 @@ PRODUCTION_PAGE = r"""
         <button class="clear" id="clear">New chat</button>
       </div>
       <div class="chat" id="chat">
-        <div class="bubble assistant">Hi, I am here with you. Share what is on your mind, and I will try to respond supportively.</div>
+        <div class="bubble assistant">Welcome. I’m here to listen and help you sort through what you’re feeling with calm, practical support 🌿</div>
       </div>
       <div class="composer">
         <div class="composer-inner">
@@ -340,7 +340,7 @@ PRODUCTION_PAGE = r"""
     clear.addEventListener("click", () => {
       history = [];
       chat.innerHTML = "";
-      addBubble("assistant", "New chat started. What would you like to talk about?");
+      addBubble("assistant", "New chat started. What would feel helpful to talk through today? 🌿");
     });
 
     async function submitMessage() {

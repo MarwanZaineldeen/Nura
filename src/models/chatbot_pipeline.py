@@ -23,6 +23,30 @@ from safety_router import crisis_reply, detect_crisis, simple_reply
 from src.retrieval.retrieval_engine import RetrievalEngine
 
 
+MENTAL_HEALTH_TERMS = {
+    "anxious",
+    "anxiety",
+    "panic",
+    "depressed",
+    "depression",
+    "sad",
+    "stress",
+    "stressed",
+    "overwhelmed",
+    "lonely",
+    "hopeless",
+    "sleep",
+    "insomnia",
+    "fear",
+    "worried",
+    "worry",
+    "trauma",
+    "therapy",
+    "therapist",
+    "mental health",
+}
+
+
 class ChatbotPipeline:
     def __init__(self, retrieval_source: str = "both", top_k: int = 5) -> None:
         self.retrieval_source = retrieval_source
@@ -81,8 +105,9 @@ class ChatbotPipeline:
             state["llm_review"] = {"language": {}, "intent": {}}
             state["generation_error"] = str(error)
             response = (
-                "I am here with you, but response generation is not available right now. "
-                "If this is urgent or you feel unsafe, please contact local emergency support."
+                "I’m here with you 🌿. I can listen, help you slow things down, and support you with mental-health questions. "
+                "The advanced response generator is not available right now, so please try again shortly. "
+                "If this feels urgent or unsafe, contact local emergency support or someone you trust right away."
             )
         except Exception as error:
             state["llm_review"] = {"language": {}, "intent": {}}
@@ -157,6 +182,8 @@ class ChatbotPipeline:
             intent = "gratitude"
         elif clean in {"bye", "goodbye", "see you", "see you later"}:
             intent = "goodbye"
+        elif any(term in clean for term in MENTAL_HEALTH_TERMS):
+            intent = "asking_mental_health_question"
         else:
             intent = "out_of_scope"
 
