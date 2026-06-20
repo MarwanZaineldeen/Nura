@@ -154,6 +154,4 @@ The chatbot exposes a REST API endpoint that can be tested using Postman or any 
 POST http://127.0.0.1:7860/chat
 ```
 ### Postman Test Screenshot
-```
-<img width="1918" height="1017" alt="image" src="https://github.com/user-attachments/assets/c70d4154-910b-478c-990f-eab4f5808a20" />
-```
+<img width="1918" height="1017" alt="image" src="https://github.com/user-attachments/assets/b1d5a871-1765-491b-8cab-dcf5337f36e0" />
