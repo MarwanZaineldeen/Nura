@@ -8,6 +8,11 @@ import re
 from pathlib import Path
 from typing import Any
 
+try:
+    from google_ai_studio import GoogleAIStudioClient
+except ModuleNotFoundError:
+    from src.models.google_ai_studio import GoogleAIStudioClient
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 REPORT_DIR = PROJECT_ROOT / "reports" / "module_3_intent_classification"
@@ -124,17 +129,21 @@ class IntentClassifier:
 
     def __init__(
         self,
-        model: str = DEFAULT_MODEL,
+        model: str | None = None,
         api_key: str | None = None,
         temperature: float = 0.0,
     ) -> None:
         load_env_file()
-        self.model = model
+        self.model = model or os.getenv("GROQ_INTENT_MODEL", DEFAULT_MODEL)
         self.api_key = api_key or os.getenv("GROQ_API_KEY")
         self.temperature = temperature
         self.timeout_seconds = float(os.getenv("GROQ_REQUEST_TIMEOUT_SECONDS", "12"))
         fallback_models = os.getenv("GROQ_INTENT_FALLBACK_MODELS", DEFAULT_FALLBACK_MODEL)
         self.fallback_models = [model.strip() for model in fallback_models.split(",") if model.strip()]
+        self.google_client = GoogleAIStudioClient(
+            model=os.getenv("GOOGLE_INTENT_MODEL") or os.getenv("GOOGLE_GENERATION_MODEL"),
+            timeout_seconds=float(os.getenv("GOOGLE_REQUEST_TIMEOUT_SECONDS", self.timeout_seconds)),
+        )
         self.client = None
 
     def _get_client(self) -> Any:
@@ -418,12 +427,26 @@ class IntentClassifier:
             except Exception as error:
                 errors.append(f"{model}: {type(error).__name__}")
 
+        if self.google_client.is_configured:
+            try:
+                content = self.google_client.generate_json(
+                    system_prompt=SYSTEM_PROMPT,
+                    user_prompt=self._build_user_prompt(clean_text, history or []),
+                    max_tokens=300,
+                    temperature=self.temperature,
+                )
+                prediction = self._normalize(self._parse_json(content), clean_text)
+                prediction["used_model"] = f"google:{self.google_client.model}"
+                return prediction
+            except Exception as error:
+                errors.append(f"google:{self.google_client.model}: {type(error).__name__}")
+
         return {
             "intent": "out_of_scope",
             "confidence": 0.0,
             "confidence_margin": 0.0,
             "intent_scores": {name: 0.0 for name in INTENT_NAMES},
-            "reason": "Intent classification failed for configured Groq model(s): " + "; ".join(errors),
+            "reason": "Intent classification failed for configured model(s): " + "; ".join(errors),
             "retrieval_query": "",
             "contextual_follow_up": False,
             "interaction_type": "standalone",

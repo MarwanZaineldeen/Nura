@@ -6,6 +6,11 @@ import re
 from pathlib import Path
 from typing import Any
 
+try:
+    from google_ai_studio import GoogleAIStudioClient
+except ModuleNotFoundError:
+    from src.models.google_ai_studio import GoogleAIStudioClient
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MODEL = "llama-3.1-8b-instant"
@@ -28,15 +33,20 @@ def load_env_file(path: Path = PROJECT_ROOT / ".env") -> None:
 
 
 class ResponseGenerator:
-    def __init__(self, model: str = DEFAULT_MODEL, api_key: str | None = None) -> None:
+    def __init__(self, model: str | None = None, api_key: str | None = None) -> None:
         load_env_file()
-        self.model = model
+        self.model = model or os.getenv("GROQ_RESPONSE_MODEL", DEFAULT_MODEL)
         self.api_key = api_key or os.getenv("GROQ_API_KEY")
         self.client = None
         self.max_tokens = int(os.getenv("GROQ_RESPONSE_MAX_TOKENS", "400"))
+        self.temperature = float(os.getenv("GROQ_RESPONSE_TEMPERATURE", "0.55"))
         self.timeout_seconds = float(os.getenv("GROQ_REQUEST_TIMEOUT_SECONDS", "12"))
         fallback_models = os.getenv("GROQ_RESPONSE_FALLBACK_MODELS", DEFAULT_FALLBACK_MODEL)
         self.fallback_models = [model.strip() for model in fallback_models.split(",") if model.strip()]
+        self.google_client = GoogleAIStudioClient(
+            model=os.getenv("GOOGLE_RESPONSE_MODEL") or os.getenv("GOOGLE_GENERATION_MODEL"),
+            timeout_seconds=float(os.getenv("GOOGLE_REQUEST_TIMEOUT_SECONDS", self.timeout_seconds)),
+        )
 
     def _get_client(self) -> Any:
         if not self.api_key:
@@ -62,7 +72,7 @@ class ResponseGenerator:
                 completion = client.chat.completions.create(
                     model=model,
                     messages=messages,
-                    temperature=0.4,
+                    temperature=self.temperature,
                     max_completion_tokens=self.max_tokens,
                     top_p=0.9,
                     response_format={"type": "json_object"},
@@ -71,11 +81,33 @@ class ResponseGenerator:
                 result = self._parse_response(content)
                 result["used_model"] = model
                 self._enforce_review_labels(result, state)
+                self._validate_generated_answer(result)
                 return result
             except Exception as error:
                 errors.append(f"{model}: {type(error).__name__}")
 
-        raise RuntimeError("Response generation failed for configured Groq model(s): " + "; ".join(errors))
+        if self.google_client.is_configured:
+            try:
+                content = self.google_client.generate_json(
+                    system_prompt=self._system_prompt(),
+                    user_prompt=self._user_prompt(state),
+                    max_tokens=self.max_tokens,
+                    temperature=self.temperature,
+                )
+                result = self._parse_response(content)
+                result["used_model"] = f"google:{self.google_client.model}"
+                self._enforce_review_labels(result, state)
+                self._validate_generated_answer(result)
+                return result
+            except Exception as error:
+                errors.append(f"google:{self.google_client.model}: {type(error).__name__}")
+
+        raise RuntimeError("Response generation failed for configured model(s): " + "; ".join(errors))
+
+    @staticmethod
+    def _validate_generated_answer(result: dict[str, Any]) -> None:
+        if not str(result.get("answer", "")).strip():
+            raise ValueError("The model returned an empty answer.")
 
     def _model_candidates(self) -> list[str]:
         models = [self.model, *self.fallback_models]
