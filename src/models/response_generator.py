@@ -64,31 +64,37 @@ class ResponseGenerator:
         return self.client
 
     def generate(self, state: dict[str, Any]) -> dict[str, Any]:
-        client = self._get_client()
+        client = None
         messages = [
             {"role": "system", "content": self._system_prompt()},
             {"role": "user", "content": self._user_prompt(state)},
         ]
 
         errors = []
-        for model in self._model_candidates():
-            try:
-                completion = client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    temperature=self.temperature,
-                    max_completion_tokens=self.max_tokens,
-                    top_p=0.9,
-                    response_format={"type": "json_object"},
-                )
-                content = completion.choices[0].message.content or "{}"
-                result = self._parse_response(content)
-                result["used_model"] = model
-                self._enforce_review_labels(result, state)
-                self._validate_generated_answer(result)
-                return result
-            except Exception as error:
-                errors.append(f"{model}: {type(error).__name__}")
+        try:
+            client = self._get_client()
+        except Exception as error:
+            errors.append(f"groq_client: {self._error_summary(error)}")
+
+        if client is not None:
+            for model in self._model_candidates():
+                try:
+                    completion = client.chat.completions.create(
+                        model=model,
+                        messages=messages,
+                        temperature=self.temperature,
+                        max_completion_tokens=self.max_tokens,
+                        top_p=0.9,
+                        response_format={"type": "json_object"},
+                    )
+                    content = completion.choices[0].message.content or "{}"
+                    result = self._parse_response(content)
+                    result["used_model"] = model
+                    self._enforce_review_labels(result, state)
+                    self._validate_generated_answer(result)
+                    return result
+                except Exception as error:
+                    errors.append(f"{model}: {self._error_summary(error)}")
 
         if self.google_client.is_configured:
             try:
@@ -104,7 +110,7 @@ class ResponseGenerator:
                 self._validate_generated_answer(result)
                 return result
             except Exception as error:
-                errors.append(f"google:{self.google_client.model}: {type(error).__name__}")
+                errors.append(f"google:{self.google_client.model}: {self._error_summary(error)}")
 
         raise RuntimeError("Response generation failed for configured model(s): " + "; ".join(errors))
 
@@ -112,6 +118,11 @@ class ResponseGenerator:
     def _validate_generated_answer(result: dict[str, Any]) -> None:
         if not str(result.get("answer", "")).strip():
             raise ValueError("The model returned an empty answer.")
+
+    @staticmethod
+    def _error_summary(error: Exception) -> str:
+        detail = " ".join(str(error).split())[:220]
+        return f"{type(error).__name__}: {detail}" if detail else type(error).__name__
 
     def _model_candidates(self) -> list[str]:
         models = [self.model, *self.fallback_models]

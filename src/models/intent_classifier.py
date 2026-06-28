@@ -403,30 +403,36 @@ class IntentClassifier:
         if quick_intent:
             return quick_intent
 
-        client = self._get_client()
+        client = None
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": self._build_user_prompt(clean_text, history or [])},
         ]
         errors = []
-        for model in self._model_candidates():
-            try:
-                completion = client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    temperature=self.temperature,
-                    max_completion_tokens=300,
-                    top_p=1,
-                    response_format={"type": "json_object"},
-                )
-                content = completion.choices[0].message.content or "{}"
-                prediction = self._normalize(self._parse_json(content), clean_text)
-                prediction["used_model"] = model
-                return prediction
-            except (json.JSONDecodeError, TypeError, ValueError) as error:
-                errors.append(f"{model}: invalid_json:{type(error).__name__}")
-            except Exception as error:
-                errors.append(f"{model}: {type(error).__name__}")
+        try:
+            client = self._get_client()
+        except Exception as error:
+            errors.append(f"groq_client: {self._error_summary(error)}")
+
+        if client is not None:
+            for model in self._model_candidates():
+                try:
+                    completion = client.chat.completions.create(
+                        model=model,
+                        messages=messages,
+                        temperature=self.temperature,
+                        max_completion_tokens=300,
+                        top_p=1,
+                        response_format={"type": "json_object"},
+                    )
+                    content = completion.choices[0].message.content or "{}"
+                    prediction = self._normalize(self._parse_json(content), clean_text)
+                    prediction["used_model"] = model
+                    return prediction
+                except (json.JSONDecodeError, TypeError, ValueError) as error:
+                    errors.append(f"{model}: invalid_json:{self._error_summary(error)}")
+                except Exception as error:
+                    errors.append(f"{model}: {self._error_summary(error)}")
 
         if self.google_client.is_configured:
             try:
@@ -440,7 +446,7 @@ class IntentClassifier:
                 prediction["used_model"] = f"google:{self.google_client.model}"
                 return prediction
             except Exception as error:
-                errors.append(f"google:{self.google_client.model}: {type(error).__name__}")
+                errors.append(f"google:{self.google_client.model}: {self._error_summary(error)}")
 
         return {
             "intent": "out_of_scope",
@@ -452,6 +458,11 @@ class IntentClassifier:
             "contextual_follow_up": False,
             "interaction_type": "standalone",
         }
+
+    @staticmethod
+    def _error_summary(error: Exception) -> str:
+        detail = " ".join(str(error).split())[:220]
+        return f"{type(error).__name__}: {detail}" if detail else type(error).__name__
 
     def _model_candidates(self) -> list[str]:
         models = [self.model, *self.fallback_models]
