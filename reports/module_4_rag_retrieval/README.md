@@ -4,7 +4,7 @@ This module builds a multilingual retrieval layer for the mental-health chatbot.
 
 ## Retrieval Sources
 
-- `cci`: CCI information-sheet chunks.
+- `cci`: structure-aware CCI information-sheet chunks with a 400-word maximum.
 - `amod`: cleaned counseling Q&A pairs.
 - `both`: searches both sources in the same Qdrant collection.
 
@@ -32,7 +32,7 @@ Required environment variables:
 ```powershell
 $env:QDRANT_URL="https://your-cluster-url.qdrant.tech"
 $env:QDRANT_API_KEY="your_qdrant_api_key"
-$env:QDRANT_COLLECTION="mental_health_rag"
+$env:QDRANT_COLLECTION="mental_health_rag_v2"
 ```
 
 Optional, if the model is already cached somewhere else:
@@ -47,13 +47,21 @@ $env:HUGGINGFACE_HUB_CACHE="path_to_your_huggingface_hub_cache"
 .\.venv\Scripts\python.exe src\retrieval\build_vector_index.py --recreate
 ```
 
+## Compare Chunking
+
+```powershell
+.\.venv\Scripts\python.exe src\evaluation\compare_retrieval_chunking.py
+```
+
+This writes `chunking_strategy_comparison.json` and `chunking_strategy_comparison.md`, comparing the previous CCI index with the current structure-aware CCI chunks.
+
 ## Test Retrieval
 
 ```powershell
 .\.venv\Scripts\python.exe src\retrieval\retrieval_engine.py "I feel anxious all the time" --source both --top-k 5
 ```
 
-The retrieval output includes rank, score, source, title, topic, text, and metadata.
+The retrieval output includes rank, cosine similarity, source, title, topic, text, and metadata. Cosine similarity is a ranking metric, not a probability or percentage confidence.
 
 ## FastAPI Deployment
 

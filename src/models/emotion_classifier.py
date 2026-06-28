@@ -52,7 +52,7 @@ class EmotionClassifier:
         torch, model_cls, tokenizer_cls = _load_transformer_stack()
         self.torch = torch
         self.tokenizer = tokenizer_cls.from_pretrained(model_source)
-        self.model = model_cls.from_pretrained(model_source)
+        self.model = model_cls.from_pretrained(model_source, low_cpu_mem_usage=True)
         self.model.eval()
         self.active_model_source = str(model_source)
 

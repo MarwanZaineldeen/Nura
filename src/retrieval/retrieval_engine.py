@@ -25,7 +25,7 @@ except ModuleNotFoundError:
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_COLLECTION_NAME = "mental_health_rag"
+DEFAULT_COLLECTION_NAME = "mental_health_rag_v2"
 SOURCE_OPTIONS = {"both", "cci", "amod"}
 
 
@@ -80,6 +80,7 @@ class RetrievalEngine:
         return {
             "rank": rank,
             "score": round(float(point.score), 4),
+            "score_type": "cosine_similarity",
             "id": payload.get("record_id"),
             "source_type": payload.get("source_type"),
             "source": payload.get("source"),

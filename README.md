@@ -1,6 +1,12 @@
-# Mental Health Support Chatbot
+---
+title: Mental Health Chatbot
+sdk: docker
+app_port: 7860
+---
 
-An end-to-end mental-health support chatbot built with a modular NLP and RAG architecture. The system detects the user's language, emotion, and intent, applies safety routing, retrieves relevant mental-health context from a Qdrant vector database, and generates a supportive response through Groq.
+# Nura: Mental Health Support Chatbot
+
+Nura is your gentle mental wellness companion: an end-to-end mental-health support chatbot built with a modular NLP and RAG architecture. The system detects the user's language, emotion, and intent, applies safety routing, retrieves relevant mental-health context from a Qdrant vector database, and generates a supportive response through Groq.
 
 The project is designed to be explainable, testable, and suitable for a professional portfolio: each module can run independently, produces reports, and is integrated into a FastAPI chatbot interface.
 
@@ -11,8 +17,7 @@ User message
   -> Language detection
   -> Emotion classification
   -> Safety guardrail
-  -> Conversation memory
-  -> Intent classification
+  -> Context-aware intent classification
   -> RAG retrieval when needed
   -> LLM response generation
   -> Same-language supportive answer
@@ -22,13 +27,14 @@ Key features:
 
 - Multilingual language detection with confidence scores.
 - Transformer-based emotion classification with word-level explainability.
-- LLM-based intent routing using strict JSON outputs.
+- Context-aware LLM intent routing with five-class score distributions.
 - Crisis-aware guardrail that bypasses normal RAG when urgent risk is detected.
 - RAG retrieval over two mental-health knowledge sources.
 - Qdrant Cloud vector database with source filtering.
 - E5 multilingual embeddings for cross-lingual retrieval.
-- FastAPI backend with production and developer UIs.
-- Short-term conversation memory for recent user context.
+- FastAPI backend with a branded Nura production UI, light/dark mode, local saved chats, and a developer testing UI.
+- Context-aware follow-up routing using recent browser-session history.
+- Final LLM review of language, emotion, and intent predictions.
 - Clean reports for every major module.
 
 ## Modules
@@ -88,14 +94,14 @@ Run:
 
 Knowledge sources:
 
-- `cci`: Centre for Clinical Interventions information sheets, cleaned from PDFs and chunked into overlapping text passages.
+- `cci`: Centre for Clinical Interventions information sheets, cleaned from PDFs and grouped into structure-aware chunks of at most 400 words.
 - `amod`: cleaned counseling Q&A pairs from `Amod/mental_health_counseling_conversations`.
 
 Retrieval stack:
 
 - Embedding model: `intfloat/multilingual-e5-base`
 - Vector database: Qdrant Cloud
-- Collection: `mental_health_rag`
+- Collection: `mental_health_rag_v2`
 - Retrieval modes:
   - `both`: Balanced Support
   - `cci`: Educational Guidance
@@ -133,7 +139,7 @@ http://127.0.0.1:8000
 Available pages:
 
 - `/` production chatbot UI
-- `/developer` developer UI with pipeline state
+- `/developer` developer UI with pipeline state and vector index switching
 - `/docs` FastAPI API documentation
 
 API endpoints:
@@ -169,7 +175,7 @@ LANGUAGE_MODEL_FILENAME=saved_lang_model.pkl
 EMOTION_MODEL_ID=your_hf_username/emotion-detector-model
 QDRANT_URL=https://your-cluster-url.qdrant.tech
 QDRANT_API_KEY=your_qdrant_api_key_here
-QDRANT_COLLECTION=mental_health_rag
+QDRANT_COLLECTION=mental_health_rag_v2
 EMBEDDING_MODEL_NAME=intfloat/multilingual-e5-base
 EMBEDDING_BATCH_SIZE=2
 TORCH_NUM_THREADS=1
@@ -209,6 +215,7 @@ reports/
   module_2_emotion_classification/
   module_3_intent_classification/
   module_4_rag_retrieval/
+  integrated_chatbot/
 ```
 
 ## Reports
@@ -218,7 +225,8 @@ Each module writes its own evaluation or data-preparation report:
 - Language metrics and confusion matrices.
 - Emotion classification metrics and explanation examples.
 - Intent test cases and accuracy summary.
-- CCI corpus summary, Amod dataset summary, and Qdrant index summary.
+- CCI corpus summary, Amod dataset summary, Qdrant index summary, and chunking comparison report.
+- Integrated chatbot edge-case report for continued chat, mixed-scope queries, multilingual inputs, crisis routing, and suggested questions.
 
 These reports make the project easier to review, debug, and present.
 

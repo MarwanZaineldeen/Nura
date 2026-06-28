@@ -32,7 +32,7 @@ CCI_PATH = PROCESSED_DIR / "cci_information_sheets.json"
 AMOD_PATH = PROCESSED_DIR / "amod_clean_qa.json"
 REPORT_PATH = REPORT_DIR / "retrieval_index_summary.json"
 
-DEFAULT_COLLECTION_NAME = "mental_health_rag"
+DEFAULT_COLLECTION_NAME = "mental_health_rag_v2"
 BATCH_SIZE = int(os.getenv("EMBEDDING_BATCH_SIZE", "2"))
 
 
@@ -167,6 +167,7 @@ def main() -> None:
         "embedding_model": MODEL_NAME,
         "embedding_dimension": embedder.dimension,
         "vector_database": "Qdrant Cloud",
+        "similarity_metric": "cosine_similarity",
         "collection_name": args.collection,
         "record_count": len(records),
         "source_counts": dict(sorted(source_counts.items())),

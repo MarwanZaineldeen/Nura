@@ -9,13 +9,15 @@ from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MODEL = "llama-3.1-8b-instant"
+EMOTION_LABELS = {"sadness", "joy", "love", "anger", "fear", "surprise"}
+INTENT_LABELS = {"greeting", "goodbye", "gratitude", "asking_mental_health_question", "out_of_scope"}
 
 
 def load_env_file(path: Path = PROJECT_ROOT / ".env") -> None:
     if not path.exists():
         return
 
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for line in path.read_text(encoding="utf-8-sig").splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
@@ -52,11 +54,74 @@ class ResponseGenerator:
             model=self.model,
             messages=messages,
             temperature=0.4,
-            max_completion_tokens=450,
+            max_completion_tokens=600,
             top_p=0.9,
+            response_format={"type": "json_object"},
         )
         content = completion.choices[0].message.content or "{}"
-        return self._parse_response(content)
+        result = self._parse_response(content)
+        self._enforce_review_labels(result, state)
+        return result
+
+    @staticmethod
+    def _enforce_review_labels(result: dict[str, Any], state: dict[str, Any]) -> None:
+        emotion_review = result.setdefault("emotion_review", {})
+        if emotion_review.get("corrected_emotion") not in EMOTION_LABELS:
+            emotion_review["corrected_emotion"] = state["emotion"].get("emotion", "unknown")
+            emotion_review["matches_module_2"] = None
+            emotion_review["reason"] = "Unsupported emotion review label; Module 2 output retained."
+        elif emotion_review.get("corrected_emotion") == state["emotion"].get("emotion"):
+            emotion_review["matches_module_2"] = True
+
+        intent_review = result.setdefault("intent_review", {})
+        if intent_review.get("corrected_intent") not in INTENT_LABELS:
+            intent_review["corrected_intent"] = state["intent"].get("intent", "out_of_scope")
+            intent_review["matches_module_3"] = None
+            intent_review["reason"] = "Unsupported intent review label; Module 3 output retained."
+        elif intent_review.get("corrected_intent") == state["intent"].get("intent"):
+            intent_review["matches_module_3"] = True
+
+        questions = result.get("suggested_questions", [])
+        if not isinstance(questions, list):
+            result["suggested_questions"] = []
+            return
+
+        clean_questions = []
+        for question in questions:
+            question = str(question).strip()
+            question = ResponseGenerator._user_perspective_question(question)
+            if question and len(question) <= 140:
+                clean_questions.append(question)
+        result["suggested_questions"] = clean_questions[:3]
+
+    @staticmethod
+    def _user_perspective_question(question: str) -> str:
+        replacements = {
+            "What are some other activities that help you relax?": "What activities can help me relax?",
+            "What are some activities that help you relax?": "What activities can help me relax?",
+            "How can you": "How can I",
+            "How do you": "How do I",
+            "What can you": "What can I",
+            "What should you": "What should I",
+            "Can you": "Can I",
+            "you feel": "I feel",
+            "your anxiety": "my anxiety",
+            "your stress": "my stress",
+            "your mood": "my mood",
+            "your thoughts": "my thoughts",
+            "your body": "my body",
+            "your day": "my day",
+            "yourself": "myself",
+            "help you": "help me",
+            "helps you": "helps me",
+            "you can": "I can",
+            "you might": "I might",
+            "you could": "I could",
+            "you should": "I should",
+        }
+        for old, new in replacements.items():
+            question = question.replace(old, new)
+        return question.strip()
 
     @staticmethod
     def _parse_response(content: str) -> dict[str, Any]:
@@ -69,14 +134,18 @@ class ResponseGenerator:
         except json.JSONDecodeError:
             return {
                 "language_review": {"matches_module_1": None, "corrected_language_code": None, "reason": "Invalid JSON."},
+                "emotion_review": {"matches_module_2": None, "corrected_emotion": None, "reason": "Invalid JSON."},
                 "intent_review": {"matches_module_3": None, "corrected_intent": None, "reason": "Invalid JSON."},
                 "answer": content.strip(),
+                "suggested_questions": [],
             }
 
         return {
             "language_review": parsed.get("language_review", {}),
+            "emotion_review": parsed.get("emotion_review", {}),
             "intent_review": parsed.get("intent_review", {}),
             "answer": str(parsed.get("answer", "")).strip(),
+            "suggested_questions": parsed.get("suggested_questions", []),
         }
 
     @staticmethod
@@ -85,15 +154,32 @@ class ResponseGenerator:
 
 Rules:
 - Answer in the same language as the user.
-- Recheck the language and intent using the user message, not only the earlier module outputs.
-- Use the retrieved context as grounding, but do not copy long passages.
+- Recheck language, emotion, and intent using the user message and recent history, not only the earlier module outputs.
+- corrected_emotion must be one of: sadness, joy, love, anger, fear, surprise.
+- corrected_intent must be one of: greeting, goodbye, gratitude, asking_mental_health_question, out_of_scope.
+- Treat interaction_type as routing context, not as an intent label.
+- Use recent conversation history to understand follow-ups and references to earlier messages.
+- If the user asks about a personal detail from recent history, answer from recent history and keep corrected_intent as out_of_scope unless the current message asks for mental-health support.
+- If the user asks whether you are a therapist, human, doctor, or real person, keep corrected_intent as out_of_scope and explain the boundary warmly.
+- Never claim permanent memory. If a detail appears in recent history, say "you mentioned" it naturally.
+- If the user shares their name, acknowledge it naturally without explaining memory capabilities.
+- Use retrieved context as grounding when retrieval is enabled, but do not copy long passages.
+- When retrieval is disabled, respond naturally using the current message and recent history.
+- Do not reject a short follow-up merely because it is vague outside its conversation context.
+- For mixed messages that mention mental health plus another activity, judge the real request carefully. If the user asks how an activity may support anxiety or mood, keep asking_mental_health_question. If the user mainly asks for unrelated instructions, mark out_of_scope.
+- Do not present food, hobbies, or routines as treatments. Frame them only as possible calming activities when appropriate.
+- For personal-context or capability questions, answer directly and warmly before inviting the user back to support if helpful.
+- For genuinely unrelated requests, briefly explain the mental-health support scope without sounding mechanical.
 - Do not diagnose, prescribe medication, or claim to replace a professional.
-- Be warm, practical, and concise.
-- Make the user feel calmly supported and invited to continue.
-- For non-crisis answers, end with one gentle, relevant follow-up question or grounding suggestion.
+- Be warm, practical, and useful. Give enough detail to help the current question before suggesting anything else.
+- Only include suggested_questions when corrected_intent is asking_mental_health_question. For greeting, goodbye, gratitude, personal-context, capability, or out_of_scope replies, return an empty suggested_questions list.
+- For non-crisis mental-health answers, include two or three short suggested_questions that the user could click next. Keep them relevant and gentle.
+- suggested_questions must be written from the user perspective as messages the user can send. Use first person: "How can I calm myself right now?" not "How can you calm yourself?"
+- Avoid repeating the same suggested_questions across nearby turns. Make each suggestion match the latest user message and move the conversation forward.
+- Do not make suggested questions the main content of the answer.
 - If the message suggests immediate danger, self-harm, suicide, or harm to others, tell the user to contact local emergency services or the nearest emergency department immediately.
 - If retrieved context is weak or unrelated, give a brief general supportive answer and suggest professional support.
-- Return only valid JSON with keys: language_review, intent_review, answer.
+- Return only valid JSON with keys: language_review, emotion_review, intent_review, answer, suggested_questions.
 
 JSON schema:
 {
@@ -102,12 +188,18 @@ JSON schema:
     "corrected_language_code": "en",
     "reason": "short explanation"
   },
+  "emotion_review": {
+    "matches_module_2": true,
+    "corrected_emotion": "fear",
+    "reason": "short explanation"
+  },
   "intent_review": {
     "matches_module_3": true,
     "corrected_intent": "asking_mental_health_question",
     "reason": "short explanation"
   },
-  "answer": "final user-facing answer"
+  "answer": "final user-facing answer",
+  "suggested_questions": ["How can I calm myself right now?", "What should I try when this feeling comes back?"]
 }
 """
 
@@ -119,10 +211,11 @@ JSON schema:
             "emotion": state["emotion"],
             "intent": state["intent"],
             "retrieval": state["retrieval"],
-            "conversation_memory": state.get("conversation_memory", []),
+            "conversation_history": state.get("conversation_history", []),
         }
         return (
-            "Review the language and intent again, then answer the user.\n\n"
+            "Review the language, emotion, and intent again, then answer the user. "
+            "If you correct the intent, make the answer match the corrected intent.\n\n"
             "Pipeline state:\n"
             + json.dumps(compact_state, ensure_ascii=False, indent=2)
         )

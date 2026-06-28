@@ -63,7 +63,7 @@ Recommended values:
 
 ```text
 LANGUAGE_MODEL_FILENAME=saved_lang_model.pkl
-QDRANT_COLLECTION=mental_health_rag
+QDRANT_COLLECTION=mental_health_rag_v2
 EMBEDDING_MODEL_NAME=intfloat/multilingual-e5-base
 EMBEDDING_BATCH_SIZE=2
 TORCH_NUM_THREADS=1

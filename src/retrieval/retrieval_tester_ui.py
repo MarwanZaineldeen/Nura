@@ -121,7 +121,7 @@ def _result_html(results: list[dict]) -> str:
             "<div class='result-card'>"
             "<div class='result-topline'>"
             f"<div class='result-title'>#{result['rank']} - {title}</div>"
-            f"<div class='result-score'>{score:.4f}</div>"
+            f"<div class='result-score'>Cosine {score:.4f}</div>"
             "</div>"
             f"<div><span class='source-pill'>{source_type}</span><span class='source-pill'>{topic}</span></div>"
             f"<p class='result-text'>{text}</p>"

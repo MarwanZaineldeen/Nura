@@ -11,7 +11,7 @@ def load_env_file(path: Path = PROJECT_ROOT / ".env") -> None:
     if not path.exists():
         return
 
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for line in path.read_text(encoding="utf-8-sig").splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue

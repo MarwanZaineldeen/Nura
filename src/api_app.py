@@ -21,8 +21,8 @@ from chatbot_pipeline import ChatbotPipeline
 
 
 app = FastAPI(
-    title="Mental Health Support Chatbot",
-    description="Integrated language, emotion, intent, RAG, guardrail, and response-generation API.",
+    title="Nura Mental Health Support",
+    description="Nura integrates language detection, emotion classification, intent routing, RAG, safety guardrails, and supportive response generation.",
     version="1.0.0",
 )
 
@@ -31,11 +31,13 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1)
     source: str = Field("both", pattern="^(both|cci|amod)$")
     top_k: int = Field(8, ge=1, le=10)
+    collection: str | None = Field(None, pattern="^(mental_health_rag|mental_health_rag_v2)$")
     history: list[dict[str, str]] = Field(default_factory=list)
 
 
 class ChatResponse(BaseModel):
     response: str
+    suggested_questions: list[str] = Field(default_factory=list)
     state: dict[str, Any]
 
 
@@ -54,8 +56,13 @@ def chat(request: ChatRequest) -> ChatResponse:
     pipeline = get_pipeline()
     pipeline.retrieval_source = request.source
     pipeline.top_k = request.top_k
+    pipeline.set_retrieval_collection(request.collection)
     output = pipeline.run(request.message, history=request.history)
-    return ChatResponse(response=output["response"], state=output["state"])
+    return ChatResponse(
+        response=output["response"],
+        suggested_questions=output.get("suggested_questions", []),
+        state=output["state"],
+    )
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -74,53 +81,185 @@ PRODUCTION_PAGE = r"""
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mental Health Support Chatbot</title>
+  <title>Nura | Mental Health Support</title>
   <style>
     :root {
-      --bg: #f6f7fb;
-      --panel: #ffffff;
-      --ink: #121826;
-      --muted: #667085;
-      --line: #d9dee8;
-      --accent: #0f766e;
-      --accent-dark: #115e59;
-      --soft: #e7f7f3;
-      --user: #0f766e;
-      --assistant: #ffffff;
-      --shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+      --bg: #fbf5f1;
+      --surface: #fffaf6;
+      --surface-soft: #f5eee7;
+      --ink: #221b2f;
+      --muted: #746b7d;
+      --line: #eadfd6;
+      --plum: #2b193d;
+      --plum-2: #4c276d;
+      --teal: #087f73;
+      --mint-soft: #ddf8ee;
+      --coral: #e95778;
+      --iris: #7567d6;
+      --user: #4c276d;
+      --shadow: 0 18px 48px rgba(34, 27, 47, 0.12);
+      --radius: 8px;
     }
+    body[data-theme="dark"] {
+      --bg: #14101d;
+      --surface: #211a2b;
+      --surface-soft: #2b2335;
+      --ink: #f7edf6;
+      --muted: #c4b8c9;
+      --line: #3e334a;
+      --shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+      background: linear-gradient(135deg, #130f1b 0%, #21172c 44%, #0d2f2d 100%);
+    }
+    body[data-theme="dark"] .topbar,
+    body[data-theme="dark"] .composer {
+      background: rgba(24, 19, 33, 0.88);
+    }
+    body[data-theme="dark"] .bubble.assistant,
+    body[data-theme="dark"] textarea,
+    body[data-theme="dark"] .clear,
+    body[data-theme="dark"] .theme-toggle,
+    body[data-theme="dark"] .chat-item {
+      background: #211a2b;
+      color: var(--ink);
+      border-color: var(--line);
+    }
+    body[data-theme="dark"] .suggestion {
+      background: #342642;
+      color: #ffd7a8;
+      border-color: #6f4d69;
+    }
+    body[data-theme="dark"] .suggestion:hover { background: #402f52; }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       min-height: 100vh;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color: var(--ink);
-      background: var(--bg);
+      background: linear-gradient(135deg, #fff8f0 0%, #f5eefb 42%, #ecfbf7 100%);
     }
-    .layout {
+    .shell {
       min-height: 100vh;
       display: grid;
-      grid-template-columns: 320px 1fr;
+      grid-template-columns: 336px minmax(0, 1fr);
     }
     aside {
-      background: #101828;
+      background: linear-gradient(180deg, var(--plum) 0%, #24162f 55%, #123f3a 100%);
       color: white;
-      padding: 24px;
+      padding: 26px;
       display: flex;
       flex-direction: column;
-      gap: 22px;
+      gap: 24px;
     }
-    .brand span {
-      color: #5eead4;
-      font-size: 12px;
-      font-weight: 800;
-      text-transform: uppercase;
+    .brand {
+      display: grid;
+      grid-template-columns: 52px 1fr;
+      gap: 13px;
+      align-items: center;
+    }
+    .logo-mark {
+      width: 52px;
+      height: 52px;
+      display: grid;
+      place-items: center;
+      background: #fff8f0;
+      color: var(--coral);
+      border: 1px solid rgba(255,255,255,0.5);
+      border-radius: 8px;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.18);
+      font-size: 24px;
+      line-height: 1;
     }
     .brand h1 {
-      margin: 6px 0 0;
-      font-size: 28px;
-      line-height: 1.08;
+      margin: 0;
+      font-size: 32px;
+      line-height: 1;
       letter-spacing: 0;
+    }
+    .brand p {
+      margin: 6px 0 0;
+      color: #ffd7a8;
+      font-size: 16px;
+      line-height: 1.22;
+      font-weight: 850;
+    }
+    .intro {
+      color: #f5e9ff;
+      line-height: 1.6;
+      font-size: 15px;
+      margin: 0;
+    }
+    .side-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .side-tab {
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.07);
+      color: white;
+      padding: 10px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 850;
+      cursor: pointer;
+      border-radius: var(--radius);
+    }
+    .side-tab.active {
+      background: #fff3de;
+      color: #3a204f;
+      border-color: #ffb067;
+    }
+    .side-panel { display: none; }
+    .side-panel.active {
+      display: grid;
+      gap: 12px;
+    }
+    .chat-list {
+      display: grid;
+      gap: 8px;
+      max-height: 330px;
+      overflow-y: auto;
+    }
+    .chat-item {
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.07);
+      color: white;
+      padding: 10px;
+      border-radius: var(--radius);
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 7px;
+      align-items: center;
+    }
+    .chat-item button {
+      border: 0;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 850;
+      padding: 2px 4px;
+    }
+    .chat-name {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      cursor: pointer;
+      font-weight: 750;
+    }
+    .empty-chats {
+      color: #f5e9ff;
+      font-size: 13px;
+      line-height: 1.45;
+      opacity: 0.84;
+    }
+    .mode-title {
+      color: #ffcb8f;
+      font-size: 12px;
+      font-weight: 850;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
     }
     .mode-group {
       display: grid;
@@ -128,112 +267,155 @@ PRODUCTION_PAGE = r"""
     }
     .mode {
       border: 1px solid rgba(255,255,255,0.18);
-      background: rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.07);
       color: white;
-      padding: 12px;
+      padding: 13px;
       text-align: left;
       cursor: pointer;
+      border-radius: var(--radius);
+      transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
     }
+    .mode:hover { transform: translateY(-1px); border-color: rgba(255,255,255,0.34); }
     .mode.active {
-      background: var(--soft);
-      color: #064e3b;
-      border-color: #99f6e4;
+      background: #fff3de;
+      color: #3a204f;
+      border-color: #ffb067;
     }
-    .mode b { display: block; margin-bottom: 3px; }
-    .mode span { color: inherit; opacity: 0.76; font-size: 13px; }
-    .side-note {
-      color: #cbd5e1;
+    .mode b { display: block; margin-bottom: 4px; font-size: 14px; }
+    .mode span { color: inherit; opacity: 0.76; font-size: 13px; line-height: 1.4; }
+    .trust-panel {
+      margin-top: auto;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.07);
+      padding: 14px;
+      border-radius: var(--radius);
+      color: #f5e9ff;
       font-size: 13px;
       line-height: 1.5;
-      margin-top: auto;
-    }
-    .privacy-note {
-      border: 1px solid rgba(255,255,255,0.16);
-      background: rgba(255,255,255,0.06);
-      padding: 12px;
-      color: #e2e8f0;
-      font-size: 13px;
-      line-height: 1.45;
     }
     main {
+      min-width: 0;
       display: grid;
       grid-template-rows: auto 1fr auto;
-      min-width: 0;
+      height: 100vh;
     }
     .topbar {
       padding: 18px 24px;
-      background: rgba(255,255,255,0.82);
+      background: rgba(255,250,246,0.82);
       border-bottom: 1px solid var(--line);
-      backdrop-filter: blur(12px);
+      backdrop-filter: blur(14px);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
     }
-    .topbar b { display: block; }
+    .topbar b { display: block; font-size: 15px; }
     .topbar span { color: var(--muted); font-size: 13px; }
+    .top-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .theme-toggle {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--ink);
+      padding: 10px 12px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 850;
+      cursor: pointer;
+      border-radius: var(--radius);
+    }
     .clear {
       border: 1px solid var(--line);
-      background: white;
+      background: var(--surface);
       color: var(--ink);
-      padding: 9px 12px;
-      font-weight: 750;
+      padding: 10px 13px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 800;
       cursor: pointer;
+      border-radius: var(--radius);
     }
     .chat {
-      padding: 24px;
       overflow-y: auto;
+      padding: 26px min(5vw, 54px);
       display: flex;
       flex-direction: column;
       gap: 14px;
     }
     .bubble {
-      max-width: min(760px, 88%);
-      padding: 14px 16px;
-      line-height: 1.55;
+      max-width: min(780px, 88%);
+      padding: 15px 17px;
+      border-radius: var(--radius);
+      line-height: 1.58;
       white-space: pre-wrap;
       box-shadow: var(--shadow);
-      border-radius: 18px;
+      font-size: 15px;
     }
     .bubble.user {
       align-self: flex-end;
-      background: var(--user);
+      background: linear-gradient(135deg, var(--user), var(--teal));
       color: white;
-      border-bottom-right-radius: 4px;
+      border-top-right-radius: 2px;
     }
     .bubble.assistant {
       align-self: flex-start;
-      background: var(--assistant);
+      background: rgba(255,255,255,0.96);
       border: 1px solid var(--line);
-      border-bottom-left-radius: 4px;
+      border-top-left-radius: 2px;
     }
+    .suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 13px;
+      white-space: normal;
+    }
+    .suggestion {
+      border: 1px solid #ffd19a;
+      background: #fff1d9;
+      color: #4a2768;
+      padding: 8px 11px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      border-radius: 999px;
+      box-shadow: none;
+      max-width: 100%;
+      text-align: left;
+    }
+    .suggestion:hover { background: #ffe2b8; }
     .typing {
       display: inline-flex;
       gap: 5px;
       align-items: center;
-      min-width: 58px;
+      min-width: 54px;
     }
     .typing span {
       width: 8px;
       height: 8px;
       border-radius: 999px;
-      background: #94a3b8;
+      background: var(--teal);
       animation: bounce 1.15s infinite ease-in-out;
     }
     .typing span:nth-child(2) { animation-delay: 0.15s; }
     .typing span:nth-child(3) { animation-delay: 0.3s; }
     @keyframes bounce {
-      0%, 80%, 100% { transform: translateY(0); opacity: 0.45; }
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.42; }
       40% { transform: translateY(-5px); opacity: 1; }
     }
     .composer {
-      padding: 18px 24px 24px;
+      padding: 18px min(5vw, 54px) 24px;
       border-top: 1px solid var(--line);
-      background: rgba(246,247,251,0.96);
+      background: rgba(255,248,240,0.92);
+      backdrop-filter: blur(12px);
     }
     .composer-inner {
       display: grid;
-      grid-template-columns: 1fr auto;
+      grid-template-columns: minmax(0, 1fr) 112px;
       gap: 10px;
       max-width: 980px;
       margin: 0 auto;
@@ -241,61 +423,91 @@ PRODUCTION_PAGE = r"""
     textarea {
       width: 100%;
       min-height: 58px;
-      max-height: 170px;
+      max-height: 168px;
       resize: vertical;
       border: 1px solid var(--line);
-      background: white;
+      background: var(--surface);
       color: var(--ink);
-      padding: 13px 14px;
+      padding: 14px;
       font: inherit;
       line-height: 1.45;
+      border-radius: var(--radius);
       box-shadow: var(--shadow);
+    }
+    textarea:focus {
+      outline: 3px solid rgba(255,176,103,0.34);
+      border-color: #ffb067;
     }
     .send {
-      border: 1px solid var(--accent-dark);
-      background: var(--accent);
+      border: 1px solid #331a48;
+      background: linear-gradient(135deg, var(--plum-2), var(--coral));
       color: white;
-      padding: 0 22px;
-      min-width: 112px;
+      padding: 0 18px;
       font: inherit;
-      font-weight: 850;
+      font-weight: 900;
       cursor: pointer;
+      border-radius: var(--radius);
       box-shadow: var(--shadow);
     }
-    .send:disabled { opacity: 0.65; cursor: wait; }
-    @media (max-width: 860px) {
-      .layout { grid-template-columns: 1fr; }
-      aside { min-height: auto; }
+    .send:hover { filter: brightness(1.06); }
+    .send:disabled { opacity: 0.68; cursor: wait; }
+    @media (max-width: 900px) {
+      .shell { grid-template-columns: 1fr; }
+      aside { padding: 18px; gap: 16px; }
+      .intro, .trust-panel { display: none; }
+      .mode-group { grid-template-columns: 1fr; }
+      main { height: auto; min-height: 72vh; }
+      .chat { min-height: 54vh; padding: 18px; }
+      .composer { padding: 14px 18px 18px; }
       .composer-inner { grid-template-columns: 1fr; }
-      .send { min-height: 46px; }
+      .send { min-height: 48px; }
+      .bubble { max-width: 94%; }
     }
   </style>
 </head>
-<body>
-  <div class="layout">
+<body data-theme="light">
+  <div class="shell">
     <aside>
       <div class="brand">
-        <span>Support Chat</span>
-        <h1>Mental Health Assistant</h1>
+        <div class="logo-mark" aria-hidden="true">&#10084;</div>
+        <div>
+          <h1>Nura</h1>
+          <p>Your gentle mental wellness companion</p>
+        </div>
       </div>
-      <div class="mode-group">
-        <button class="mode active" data-source="both"><b>Balanced Support</b><span>Warm support with practical guidance.</span></button>
-        <button class="mode" data-source="cci"><b>Educational Guidance</b><span>Clear coping ideas and psychoeducation.</span></button>
-        <button class="mode" data-source="amod"><b>Counseling Style</b><span>Reflective, conversation-centered support.</span></button>
+      <p class="intro">Feel heard. Find calm. Take the next step.</p>
+      <div class="side-tabs">
+        <button class="side-tab active" data-panel="support">Support</button>
+        <button class="side-tab" data-panel="chats">Chats</button>
       </div>
-      <div class="side-note">A calm space for emotional support, reflection, and practical next steps.</div>
+      <div class="side-panel active" id="supportPanel">
+        <div class="mode-title">Support style</div>
+        <div class="mode-group">
+          <button class="mode active" data-source="both"><b>Balanced Care</b><span>Supportive conversation with practical guidance.</span></button>
+          <button class="mode" data-source="cci"><b>Learn and Cope</b><span>Clear skills, grounding ideas, and psychoeducation.</span></button>
+          <button class="mode" data-source="amod"><b>Reflective Talk</b><span>Gentler counseling-style responses.</span></button>
+        </div>
+      </div>
+      <div class="side-panel" id="chatsPanel">
+        <div class="mode-title">Saved chats</div>
+        <div class="chat-list" id="chatList"></div>
+      </div>
+      <div class="trust-panel">Nura offers educational support and reflection. It is not a replacement for a licensed professional or emergency care.</div>
     </aside>
     <main>
       <div class="topbar">
-        <div><b>Conversation</b><span>Talk through what feels heavy, one message at a time</span></div>
-        <button class="clear" id="clear">New chat</button>
+        <div><b>Your conversation with Nura</b><span>Share as little or as much as you want</span></div>
+        <div class="top-actions">
+          <button class="theme-toggle" id="themeToggle">&#127769; Dark</button>
+          <button class="clear" id="clear">New chat</button>
+        </div>
       </div>
       <div class="chat" id="chat">
-        <div class="bubble assistant">Welcome. I’m here with you ❤️. Share what’s on your mind, and we’ll take it one step at a time with calm, practical support.</div>
+        <div class="bubble assistant">Hi, I'm Nura &#10084;&#65039;. Tell me what feels heavy right now, and I'll help you sort it into one gentle next step.</div>
       </div>
       <div class="composer">
         <div class="composer-inner">
-          <textarea id="message" placeholder="Write your message..."></textarea>
+          <textarea id="message" placeholder="Write what is on your mind..."></textarea>
           <button class="send" id="send">Send</button>
         </div>
       </div>
@@ -306,14 +518,55 @@ PRODUCTION_PAGE = r"""
     const message = document.getElementById("message");
     const send = document.getElementById("send");
     const clear = document.getElementById("clear");
+    const themeToggle = document.getElementById("themeToggle");
+    const chatList = document.getElementById("chatList");
+    const sideTabs = [...document.querySelectorAll(".side-tab")];
     const modeButtons = [...document.querySelectorAll(".mode")];
     let source = "both";
     let history = [];
+    let shownSuggestions = new Set();
+    let currentChatId = null;
+    let savedChats = JSON.parse(localStorage.getItem("nuraChats") || "[]");
 
-    function addBubble(role, text) {
+    function normalizeSuggestion(question) {
+      return question.trim().toLowerCase().replace(/\s+/g, " ");
+    }
+
+    function freshSuggestions(suggestions) {
+      const fresh = [];
+      suggestions.forEach((question) => {
+        const key = normalizeSuggestion(question);
+        if (key && !shownSuggestions.has(key)) {
+          shownSuggestions.add(key);
+          fresh.push(question);
+        }
+      });
+      return fresh.slice(0, 3);
+    }
+
+    function addBubble(role, text, suggestions = []) {
       const bubble = document.createElement("div");
       bubble.className = `bubble ${role}`;
       bubble.textContent = text;
+
+      const visibleSuggestions = role === "assistant" ? freshSuggestions(suggestions) : [];
+      if (visibleSuggestions.length) {
+        const suggestionBox = document.createElement("div");
+        suggestionBox.className = "suggestions";
+        visibleSuggestions.forEach((question) => {
+          const chip = document.createElement("button");
+          chip.className = "suggestion";
+          chip.type = "button";
+          chip.textContent = question;
+          chip.addEventListener("click", () => {
+            message.value = question;
+            submitMessage();
+          });
+          suggestionBox.appendChild(chip);
+        });
+        bubble.appendChild(suggestionBox);
+      }
+
       chat.appendChild(bubble);
       chat.scrollTop = chat.scrollHeight;
       return bubble;
@@ -328,6 +581,129 @@ PRODUCTION_PAGE = r"""
       return bubble;
     }
 
+
+    function initialMessage() {
+      return "Hi, I'm Nura \u2764\ufe0f. Tell me what feels heavy right now, and I'll help you sort it into one gentle next step.";
+    }
+
+    function saveChats() {
+      localStorage.setItem("nuraChats", JSON.stringify(savedChats));
+      renderChatList();
+    }
+
+    function chatId() {
+      if (crypto.randomUUID) return crypto.randomUUID();
+      return `chat-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
+    function chatTitle(messages) {
+      const firstUser = messages.find((item) => item.role === "user");
+      if (!firstUser) return "New conversation";
+      const text = firstUser.content.trim().replace(/\s+/g, " ");
+      return text.length > 32 ? `${text.slice(0, 32)}...` : text;
+    }
+
+    function saveCurrentChat() {
+      if (!history.length) return;
+      const existing = savedChats.find((item) => item.id === currentChatId);
+      if (existing) {
+        existing.messages = history;
+        existing.updatedAt = Date.now();
+      } else {
+        currentChatId = chatId();
+        savedChats.unshift({
+          id: currentChatId,
+          title: chatTitle(history),
+          messages: history,
+          updatedAt: Date.now(),
+        });
+      }
+      savedChats.sort((a, b) => b.updatedAt - a.updatedAt);
+      saveChats();
+    }
+
+    function renderChatList() {
+      chatList.innerHTML = "";
+      if (!savedChats.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-chats";
+        empty.textContent = "Saved conversations will appear here when you start a new chat.";
+        chatList.appendChild(empty);
+        return;
+      }
+      savedChats.forEach((item) => {
+        const row = document.createElement("div");
+        row.className = "chat-item";
+
+        const name = document.createElement("div");
+        name.className = "chat-name";
+        name.textContent = item.title;
+        name.title = item.title;
+        name.addEventListener("click", () => loadChat(item.id));
+
+        const rename = document.createElement("button");
+        rename.type = "button";
+        rename.textContent = "Edit";
+        rename.addEventListener("click", () => renameChat(item.id));
+
+        const del = document.createElement("button");
+        del.type = "button";
+        del.textContent = "Del";
+        del.addEventListener("click", () => deleteChat(item.id));
+
+        row.append(name, rename, del);
+        chatList.appendChild(row);
+      });
+    }
+
+    function renderHistory() {
+      chat.innerHTML = "";
+      if (!history.length) {
+        addBubble("assistant", initialMessage());
+        return;
+      }
+      history.forEach((item) => addBubble(item.role, item.content));
+    }
+
+    function loadChat(id) {
+      saveCurrentChat();
+      const item = savedChats.find((chatItem) => chatItem.id === id);
+      if (!item) return;
+      currentChatId = item.id;
+      history = item.messages || [];
+      shownSuggestions = new Set();
+      renderHistory();
+    }
+
+    function renameChat(id) {
+      const item = savedChats.find((chatItem) => chatItem.id === id);
+      if (!item) return;
+      const title = prompt("Rename chat", item.title);
+      if (!title || !title.trim()) return;
+      item.title = title.trim().slice(0, 60);
+      item.updatedAt = Date.now();
+      saveChats();
+    }
+
+    function deleteChat(id) {
+      savedChats = savedChats.filter((item) => item.id !== id);
+      if (currentChatId === id) {
+        currentChatId = null;
+        history = [];
+        shownSuggestions = new Set();
+        renderHistory();
+      }
+      saveChats();
+    }
+    sideTabs.forEach((button) => {
+      button.addEventListener("click", () => {
+        sideTabs.forEach((item) => item.classList.remove("active"));
+        button.classList.add("active");
+        document.getElementById("supportPanel").classList.toggle("active", button.dataset.panel === "support");
+        document.getElementById("chatsPanel").classList.toggle("active", button.dataset.panel === "chats");
+      });
+    });
+
     modeButtons.forEach((button) => {
       button.addEventListener("click", () => {
         modeButtons.forEach((item) => item.classList.remove("active"));
@@ -336,19 +712,32 @@ PRODUCTION_PAGE = r"""
       });
     });
 
+    function setTheme(theme) {
+      document.body.dataset.theme = theme;
+      themeToggle.textContent = theme === "dark" ? "\u2600\ufe0f Light" : "\ud83c\udf19 Dark";
+      localStorage.setItem("nuraTheme", theme);
+    }
+
+    themeToggle.addEventListener("click", () => {
+      setTheme(document.body.dataset.theme === "dark" ? "light" : "dark");
+    });
+
     clear.addEventListener("click", () => {
+      saveCurrentChat();
+      currentChatId = null;
       history = [];
+      shownSuggestions = new Set();
       chat.innerHTML = "";
-      addBubble("assistant", "New chat started. I’m here with you ❤️. What would feel helpful to talk through today?");
+      addBubble("assistant", "New chat started. I'm here with you \u2764\ufe0f. What would feel helpful to talk through today?");
+      message.focus();
     });
 
     async function submitMessage() {
       const text = message.value.trim();
       if (!text) return;
 
+      const previousHistory = history.slice(-10);
       addBubble("user", text);
-      history.push({ role: "user", content: text });
-      history = history.slice(-10);
       message.value = "";
       send.disabled = true;
       send.textContent = "...";
@@ -358,22 +747,32 @@ PRODUCTION_PAGE = r"""
         const response = await fetch("/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: text, source, top_k: 8, history }),
+          body: JSON.stringify({ message: text, source, top_k: 8, history: previousHistory }),
         });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
         typingBubble.remove();
-        addBubble("assistant", data.response || "I am here with you, but I could not generate a full response. Could you tell me a little more?");
+        addBubble(
+          "assistant",
+          data.response || "I am here with you, but I could not generate a full response. Could you tell me a little more?",
+          data.suggested_questions || []
+        );
+        history.push({ role: "user", content: text });
         history.push({ role: "assistant", content: data.response || "" });
         history = history.slice(-10);
+        saveCurrentChat();
       } catch (error) {
         typingBubble.remove();
         addBubble("assistant", "I had trouble responding just now. Please try again in a moment.");
       } finally {
         send.disabled = false;
         send.textContent = "Send";
+        message.focus();
       }
     }
+
+    setTheme(localStorage.getItem("nuraTheme") || "light");
+    renderChatList();
 
     send.addEventListener("click", submitMessage);
     message.addEventListener("keydown", (event) => {
@@ -386,7 +785,6 @@ PRODUCTION_PAGE = r"""
 </body>
 </html>
 """
-
 
 DEVELOPER_PAGE = r"""
 <!doctype html>
@@ -407,7 +805,7 @@ DEVELOPER_PAGE = r"""
       --indigo: #4338ca;
       --rose: #be123c;
     }
-    * { box-sizing: border-box; }
+   * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -501,6 +899,21 @@ DEVELOPER_PAGE = r"""
       opacity: 0.65;
       cursor: wait;
     }
+    .developer-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .secondary {
+      background: white;
+      color: var(--ink);
+      border-color: var(--line);
+    }
+    .history-status {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
     .answer {
       min-height: 190px;
       line-height: 1.58;
@@ -566,7 +979,7 @@ DEVELOPER_PAGE = r"""
     }
   </style>
 </head>
-<body>
+<body data-theme="light">
   <div class="app">
     <header>
       <div class="header-inner">
@@ -584,6 +997,13 @@ DEVELOPER_PAGE = r"""
 
         <div class="controls">
           <div>
+            <label for="collection">Vector index</label>
+            <select id="collection">
+              <option value="mental_health_rag_v2">Current v2 index</option>
+              <option value="mental_health_rag">Previous index</option>
+            </select>
+          </div>
+          <div>
             <label for="source">Retrieval mode</label>
             <select id="source">
               <option value="both">Balanced Support</option>
@@ -597,7 +1017,11 @@ DEVELOPER_PAGE = r"""
           </div>
         </div>
 
-        <button id="send">Generate Response</button>
+        <div class="developer-actions">
+          <button id="send">Generate Response</button>
+          <button id="clearHistory" class="secondary">Clear Conversation</button>
+        </div>
+        <div id="historyStatus" class="history-status">Conversation history: 0 messages</div>
       </section>
 
       <section class="panel">
@@ -626,16 +1050,34 @@ DEVELOPER_PAGE = r"""
     const language = document.getElementById("language");
     const emotion = document.getElementById("emotion");
     const intent = document.getElementById("intent");
+    const clearHistory = document.getElementById("clearHistory");
+    const historyStatus = document.getElementById("historyStatus");
+    let history = [];
+
 
     function pct(value) {
       if (typeof value !== "number") return "";
       return ` (${Math.round(value * 100)}%)`;
     }
 
+    function updateHistoryStatus() {
+      historyStatus.textContent = `Conversation history: ${history.length} messages`;
+    }
+
+    clearHistory.addEventListener("click", () => {
+      history = [];
+      updateHistoryStatus();
+      stateBox.textContent = "{}";
+      route.textContent = "Waiting";
+      answer.textContent = "Conversation cleared. Enter a message to run the full pipeline.";
+    });
+
     sendButton.addEventListener("click", async () => {
       const message = document.getElementById("message").value.trim();
       const source = document.getElementById("source").value;
+      const collection = document.getElementById("collection").value;
       const topK = Number(document.getElementById("topK").value || 5);
+      const previousHistory = history.slice(-10);
 
       if (!message) {
         answer.innerHTML = "<span class='error'>Please enter a message.</span>";
@@ -650,7 +1092,7 @@ DEVELOPER_PAGE = r"""
         const response = await fetch("/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message, source, top_k: topK }),
+          body: JSON.stringify({ message, source, top_k: topK, collection, history: previousHistory }),
         });
 
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -663,6 +1105,11 @@ DEVELOPER_PAGE = r"""
         emotion.textContent = `${state.emotion?.emotion || "-"}${pct(state.emotion?.confidence)}`;
         intent.textContent = `${state.intent?.intent || "-"}${pct(state.intent?.confidence)}`;
         stateBox.textContent = JSON.stringify(state, null, 2);
+        history.push({ role: "user", content: message });
+        history.push({ role: "assistant", content: data.response || "" });
+        history = history.slice(-10);
+
+        updateHistoryStatus();
       } catch (error) {
         answer.innerHTML = `<span class='error'>Request failed: ${error.message}</span>`;
       } finally {

@@ -1,0 +1,746 @@
+{
+  "created_at_utc": "2026-06-28T04:10:30.811614+00:00",
+  "top_k": 5,
+  "source_filter": "cci",
+  "collections": {
+    "mental_health_rag": [
+      {
+        "query": "What can help during a panic attack at work?",
+        "top_score": 0.8466,
+        "top_title": "Reassurance Seeking Carers",
+        "top_topic": "Anxiety",
+        "top_word_count": 95,
+        "unique_titles_in_top_5": 4,
+        "top_results": [
+          {
+            "rank": 1,
+            "score": 0.8466,
+            "title": "Reassurance Seeking Carers",
+            "topic": "Anxiety",
+            "word_count": 95
+          },
+          {
+            "rank": 2,
+            "score": 0.8427,
+            "title": "Biology and Psychology of Panic",
+            "topic": "Panic",
+            "word_count": 147
+          },
+          {
+            "rank": 3,
+            "score": 0.8373,
+            "title": "Situational Exposure",
+            "topic": "Panic",
+            "word_count": 179
+          },
+          {
+            "rank": 4,
+            "score": 0.8361,
+            "title": "Physical Symptons and Panic",
+            "topic": "Panic",
+            "word_count": 168
+          },
+          {
+            "rank": 5,
+            "score": 0.8346,
+            "title": "Physical Symptons and Panic",
+            "topic": "Panic",
+            "word_count": 168
+          }
+        ]
+      },
+      {
+        "query": "How can I stop worrying at night?",
+        "top_score": 0.8507,
+        "top_title": "Postpone your Worry",
+        "top_topic": "Worry and Rumination",
+        "top_word_count": 163,
+        "unique_titles_in_top_5": 3,
+        "top_results": [
+          {
+            "rank": 1,
+            "score": 0.8507,
+            "title": "Postpone your Worry",
+            "topic": "Worry and Rumination",
+            "word_count": 163
+          },
+          {
+            "rank": 2,
+            "score": 0.8467,
+            "title": "Postpone your Worry",
+            "topic": "Worry and Rumination",
+            "word_count": 185
+          },
+          {
+            "rank": 3,
+            "score": 0.8429,
+            "title": "Nightmares explained",
+            "topic": "Sleep",
+            "word_count": 158
+          },
+          {
+            "rank": 4,
+            "score": 0.8383,
+            "title": "Mindfulness and Letting go",
+            "topic": "Worry and Rumination",
+            "word_count": 86
+          },
+          {
+            "rank": 5,
+            "score": 0.8378,
+            "title": "Postpone your Worry",
+            "topic": "Worry and Rumination",
+            "word_count": 173
+          }
+        ]
+      },
+      {
+        "query": "What should I do when I keep seeking reassurance?",
+        "top_score": 0.8474,
+        "top_title": "Reducing Reassurance Seeking",
+        "top_topic": "Anxiety",
+        "top_word_count": 168,
+        "unique_titles_in_top_5": 2,
+        "top_results": [
+          {
+            "rank": 1,
+            "score": 0.8474,
+            "title": "Reducing Reassurance Seeking",
+            "topic": "Anxiety",
+            "word_count": 168
+          },
+          {
+            "rank": 2,
+            "score": 0.8468,
+            "title": "Reducing Reassurance Seeking",
+            "topic": "Anxiety",
+            "word_count": 64
+          },
+          {
+            "rank": 3,
+            "score": 0.8462,
+            "title": "Reducing Reassurance Seeking",
+            "topic": "Anxiety",
+            "word_count": 160
+          },
+          {
+            "rank": 4,
+            "score": 0.8441,
+            "title": "Reducing Reassurance Seeking",
+            "topic": "Anxiety",
+            "word_count": 160
+          },
+          {
+            "rank": 5,
+            "score": 0.8405,
+            "title": "Reassurance Seeking Carers",
+            "topic": "Anxiety",
+            "word_count": 169
+          }
+        ]
+      },
+      {
+        "query": "How can I improve low self-esteem?",
+        "top_score": 0.8632,
+        "top_title": "What Maintains Low Self-Esteem",
+        "top_topic": "Self Esteem",
+        "top_word_count": 46,
+        "unique_titles_in_top_5": 3,
+        "top_results": [
+          {
+            "rank": 1,
+            "score": 0.8632,
+            "title": "What Maintains Low Self-Esteem",
+            "topic": "Self Esteem",
+            "word_count": 46
+          },
+          {
+            "rank": 2,
+            "score": 0.8632,
+            "title": "Adjusting Negative Core Beliefs",
+            "topic": "Self Esteem",
+            "word_count": 71
+          },
+          {
+            "rank": 3,
+            "score": 0.8623,
+            "title": "Adjusting Negative Core Beliefs",
+            "topic": "Self Esteem",
+            "word_count": 153
+          },
+          {
+            "rank": 4,
+            "score": 0.8558,
+            "title": "What is Low Self-Esteem",
+            "topic": "Self Esteem",
+            "word_count": 150
+          },
+          {
+            "rank": 5,
+            "score": 0.8551,
+            "title": "Adjusting Negative Core Beliefs",
+            "topic": "Self Esteem",
+            "word_count": 155
+          }
+        ]
+      },
+      {
+        "query": "What are practical ways to manage procrastination?",
+        "top_score": 0.8704,
+        "top_title": "Practical Strategies",
+        "top_topic": "Procrastination",
+        "top_word_count": 179,
+        "unique_titles_in_top_5": 2,
+        "top_results": [
+          {
+            "rank": 1,
+            "score": 0.8704,
+            "title": "Practical Strategies",
+            "topic": "Procrastination",
+            "word_count": 179
+          },
+          {
+            "rank": 2,
+            "score": 0.8657,
+            "title": "Practical Strategies",
+            "topic": "Procrastination",
+            "word_count": 179
+          },
+          {
+            "rank": 3,
+            "score": 0.8655,
+            "title": "Practical Strategies",
+            "topic": "Procrastination",
+            "word_count": 161
+          },
+          {
+            "rank": 4,
+            "score": 0.8523,
+            "title": "Procrastination Action Plan",
+            "topic": "Procrastination",
+            "word_count": 165
+          },
+          {
+            "rank": 5,
+            "score": 0.8504,
+            "title": "Practical Strategies",
+            "topic": "Procrastination",
+            "word_count": 181
+          }
+        ]
+      },
+      {
+        "query": "How can I calm health anxiety?",
+        "top_score": 0.8752,
+        "top_title": "Reassurance Seeking Carers",
+        "top_topic": "Anxiety",
+        "top_word_count": 95,
+        "unique_titles_in_top_5": 2,
+        "top_results": [
+          {
+            "rank": 1,
+            "score": 0.8752,
+            "title": "Reassurance Seeking Carers",
+            "topic": "Anxiety",
+            "word_count": 95
+          },
+          {
+            "rank": 2,
+            "score": 0.8692,
+            "title": "What is Health Anxiety",
+            "topic": "Health Anxiety",
+            "word_count": 135
+          },
+          {
+            "rank": 3,
+            "score": 0.869,
+            "title": "What is Health Anxiety",
+            "topic": "Health Anxiety",
+            "word_count": 138
+          },
+          {
+            "rank": 4,
+            "score": 0.8677,
+            "title": "What is Health Anxiety",
+            "topic": "Health Anxiety",
+            "word_count": 149
+          },
+          {
+            "rank": 5,
+            "score": 0.8616,
+            "title": "What is Health Anxiety",
+            "topic": "Health Anxiety",
+            "word_count": 155
+          }
+        ]
+      },
+      {
+        "query": "What can help with social anxiety before meeting people?",
+        "top_score": 0.854,
+        "top_title": "What can be done about Social Anxiety",
+        "top_topic": "Social Anxiety",
+        "top_word_count": 134,
+        "unique_titles_in_top_5": 2,
+        "top_results": [
+          {
+            "rank": 1,
+            "score": 0.854,
+            "title": "What can be done about Social Anxiety",
+            "topic": "Social Anxiety",
+            "word_count": 134
+          },
+          {
+            "rank": 2,
+            "score": 0.8489,
+            "title": "Situational Exposure",
+            "topic": "Social Anxiety",
+            "word_count": 145
+          },
+          {
+            "rank": 3,
+            "score": 0.8473,
+            "title": "Situational Exposure",
+            "topic": "Social Anxiety",
+            "word_count": 164
+          },
+          {
+            "rank": 4,
+            "score": 0.8466,
+            "title": "Situational Exposure",
+            "topic": "Social Anxiety",
+            "word_count": 134
+          },
+          {
+            "rank": 5,
+            "score": 0.8457,
+            "title": "What can be done about Social Anxiety",
+            "topic": "Social Anxiety",
+            "word_count": 164
+          }
+        ]
+      },
+      {
+        "query": "How do I handle perfectionism when it makes me stuck?",
+        "top_score": 0.8369,
+        "top_title": "What Maintains Perfectionism",
+        "top_topic": "Perfectionism",
+        "top_word_count": 120,
+        "unique_titles_in_top_5": 4,
+        "top_results": [
+          {
+            "rank": 1,
+            "score": 0.8369,
+            "title": "What Maintains Perfectionism",
+            "topic": "Perfectionism",
+            "word_count": 120
+          },
+          {
+            "rank": 2,
+            "score": 0.8333,
+            "title": "What is Perfectionism",
+            "topic": "Perfectionism",
+            "word_count": 141
+          },
+          {
+            "rank": 3,
+            "score": 0.8322,
+            "title": "What Maintains Perfectionism",
+            "topic": "Perfectionism",
+            "word_count": 115
+          },
+          {
+            "rank": 4,
+            "score": 0.8317,
+            "title": "Re-Evaluating the Importance of Achieving",
+            "topic": "Perfectionism",
+            "word_count": 178
+          },
+          {
+            "rank": 5,
+            "score": 0.8293,
+            "title": "Mindfulness and Letting go",
+            "topic": "Worry and Rumination",
+            "word_count": 86
+          }
+        ]
+      }
+    ],
+    "mental_health_rag_v2": [
+      {
+        "query": "What can help during a panic attack at work?",
+        "top_score": 0.8317,
+        "top_title": "Situational Exposure",
+        "top_topic": "Panic",
+        "top_word_count": 377,
+        "unique_titles_in_top_5": 3,
+        "top_results": [
+          {
+            "rank": 1,
+            "score": 0.8317,
+            "title": "Situational Exposure",
+            "topic": "Panic",
+            "word_count": 377
+          },
+          {
+            "rank": 2,
+            "score": 0.8268,
+            "title": "Situational Exposure",
+            "topic": "Anxiety",
+            "word_count": 377
+          },
+          {
+            "rank": 3,
+            "score": 0.8257,
+            "title": "Biology and Psychology of Panic",
+            "topic": "Panic",
+            "word_count": 385
+          },
+          {
+            "rank": 4,
+            "score": 0.8229,
+            "title": "Situational Exposure",
+            "topic": "Panic",
+            "word_count": 96
+          },
+          {
+            "rank": 5,
+            "score": 0.8211,
+            "title": "Physical Symptons and Panic",
+            "topic": "Panic",
+            "word_count": 374
+          }
+        ]
+      },
+      {
+        "query": "How can I stop worrying at night?",
+        "top_score": 0.8481,
+        "top_title": "Postpone your Worry",
+        "top_topic": "Worry and Rumination",
+        "top_word_count": 87,
+        "unique_titles_in_top_5": 2,
+        "top_results": [
+          {
+            "rank": 1,
+            "score": 0.8481,
+            "title": "Postpone your Worry",
+            "topic": "Worry and Rumination",
+            "word_count": 87
+          },
+          {
+            "rank": 2,
+            "score": 0.8443,
+            "title": "Postpone your Worry",
+            "topic": "Worry and Rumination",
+            "word_count": 171
+          },
+          {
+            "rank": 3,
+            "score": 0.8383,
+            "title": "Nightmares explained",
+            "topic": "Sleep",
+            "word_count": 116
+          },
+          {
+            "rank": 4,
+            "score": 0.8378,
+            "title": "Postpone your Worry",
+            "topic": "Worry and Rumination",
+            "word_count": 297
+          },
+          {
+            "rank": 5,
+            "score": 0.8333,
+            "title": "Postpone your Worry",
+            "topic": "Worry and Rumination",
+            "word_count": 106
+          }
+        ]
+      },
+      {
+        "query": "What should I do when I keep seeking reassurance?",
+        "top_score": 0.8577,
+        "top_title": "Reducing Reassurance Seeking",
+        "top_topic": "Anxiety",
+        "top_word_count": 100,
+        "unique_titles_in_top_5": 2,
+        "top_results": [
+          {
+            "rank": 1,
+            "score": 0.8577,
+            "title": "Reducing Reassurance Seeking",
+            "topic": "Anxiety",
+            "word_count": 100
+          },
+          {
+            "rank": 2,
+            "score": 0.8532,
+            "title": "Reducing Reassurance Seeking",
+            "topic": "Anxiety",
+            "word_count": 275
+          },
+          {
+            "rank": 3,
+            "score": 0.847,
+            "title": "Reducing Reassurance Seeking",
+            "topic": "Anxiety",
+            "word_count": 92
+          },
+          {
+            "rank": 4,
+            "score": 0.8452,
+            "title": "Reducing Reassurance Seeking",
+            "topic": "Anxiety",
+            "word_count": 99
+          },
+          {
+            "rank": 5,
+            "score": 0.8439,
+            "title": "Reassurance Seeking Carers",
+            "topic": "Anxiety",
+            "word_count": 96
+          }
+        ]
+      },
+      {
+        "query": "How can I improve low self-esteem?",
+        "top_score": 0.8596,
+        "top_title": "Adjusting Negative Core Beliefs",
+        "top_topic": "Self Esteem",
+        "top_word_count": 211,
+        "unique_titles_in_top_5": 4,
+        "top_results": [
+          {
+            "rank": 1,
+            "score": 0.8596,
+            "title": "Adjusting Negative Core Beliefs",
+            "topic": "Self Esteem",
+            "word_count": 211
+          },
+          {
+            "rank": 2,
+            "score": 0.856,
+            "title": "Overcoming Biased Expectations",
+            "topic": "Self Esteem",
+            "word_count": 29
+          },
+          {
+            "rank": 3,
+            "score": 0.8532,
+            "title": "Adjusting Negative Core Beliefs",
+            "topic": "Self Esteem",
+            "word_count": 207
+          },
+          {
+            "rank": 4,
+            "score": 0.8524,
+            "title": "What Maintains Low Self-Esteem",
+            "topic": "Self Esteem",
+            "word_count": 80
+          },
+          {
+            "rank": 5,
+            "score": 0.8513,
+            "title": "Acknowledging Your Positives",
+            "topic": "Self Esteem",
+            "word_count": 177
+          }
+        ]
+      },
+      {
+        "query": "What are practical ways to manage procrastination?",
+        "top_score": 0.8642,
+        "top_title": "Practical Strategies",
+        "top_topic": "Procrastination",
+        "top_word_count": 396,
+        "unique_titles_in_top_5": 3,
+        "top_results": [
+          {
+            "rank": 1,
+            "score": 0.8642,
+            "title": "Practical Strategies",
+            "topic": "Procrastination",
+            "word_count": 396
+          },
+          {
+            "rank": 2,
+            "score": 0.8517,
+            "title": "Practical Strategies",
+            "topic": "Procrastination",
+            "word_count": 384
+          },
+          {
+            "rank": 3,
+            "score": 0.85,
+            "title": "Procrastination Action Plan",
+            "topic": "Procrastination",
+            "word_count": 384
+          },
+          {
+            "rank": 4,
+            "score": 0.8344,
+            "title": "Postpone your Worry",
+            "topic": "Worry and Rumination",
+            "word_count": 87
+          },
+          {
+            "rank": 5,
+            "score": 0.8318,
+            "title": "Postpone your Worry",
+            "topic": "Worry and Rumination",
+            "word_count": 171
+          }
+        ]
+      },
+      {
+        "query": "How can I calm health anxiety?",
+        "top_score": 0.8588,
+        "top_title": "Anxiety and Exercise",
+        "top_topic": "Anxiety",
+        "top_word_count": 224,
+        "unique_titles_in_top_5": 3,
+        "top_results": [
+          {
+            "rank": 1,
+            "score": 0.8588,
+            "title": "Anxiety and Exercise",
+            "topic": "Anxiety",
+            "word_count": 224
+          },
+          {
+            "rank": 2,
+            "score": 0.8582,
+            "title": "What is Health Anxiety",
+            "topic": "Health Anxiety",
+            "word_count": 156
+          },
+          {
+            "rank": 3,
+            "score": 0.8576,
+            "title": "Different Types of Anxiety",
+            "topic": "Anxiety",
+            "word_count": 203
+          },
+          {
+            "rank": 4,
+            "score": 0.8556,
+            "title": "What is Health Anxiety",
+            "topic": "Health Anxiety",
+            "word_count": 276
+          },
+          {
+            "rank": 5,
+            "score": 0.8552,
+            "title": "What is Health Anxiety",
+            "topic": "Health Anxiety",
+            "word_count": 266
+          }
+        ]
+      },
+      {
+        "query": "What can help with social anxiety before meeting people?",
+        "top_score": 0.8531,
+        "top_title": "What can be done about Social Anxiety",
+        "top_topic": "Social Anxiety",
+        "top_word_count": 87,
+        "unique_titles_in_top_5": 3,
+        "top_results": [
+          {
+            "rank": 1,
+            "score": 0.8531,
+            "title": "What can be done about Social Anxiety",
+            "topic": "Social Anxiety",
+            "word_count": 87
+          },
+          {
+            "rank": 2,
+            "score": 0.8465,
+            "title": "Situational Exposure",
+            "topic": "Social Anxiety",
+            "word_count": 93
+          },
+          {
+            "rank": 3,
+            "score": 0.8463,
+            "title": "What can be done about Social Anxiety",
+            "topic": "Social Anxiety",
+            "word_count": 149
+          },
+          {
+            "rank": 4,
+            "score": 0.8451,
+            "title": "Different Types of Anxiety",
+            "topic": "Anxiety",
+            "word_count": 176
+          },
+          {
+            "rank": 5,
+            "score": 0.8451,
+            "title": "What can be done about Social Anxiety",
+            "topic": "Social Anxiety",
+            "word_count": 225
+          }
+        ]
+      },
+      {
+        "query": "How do I handle perfectionism when it makes me stuck?",
+        "top_score": 0.8318,
+        "top_title": "What Maintains Perfectionism",
+        "top_topic": "Perfectionism",
+        "top_word_count": 64,
+        "unique_titles_in_top_5": 4,
+        "top_results": [
+          {
+            "rank": 1,
+            "score": 0.8318,
+            "title": "What Maintains Perfectionism",
+            "topic": "Perfectionism",
+            "word_count": 64
+          },
+          {
+            "rank": 2,
+            "score": 0.8296,
+            "title": "Perfectionism Behaviours",
+            "topic": "Perfectionism",
+            "word_count": 146
+          },
+          {
+            "rank": 3,
+            "score": 0.8294,
+            "title": "What Maintains Perfectionism",
+            "topic": "Perfectionism",
+            "word_count": 119
+          },
+          {
+            "rank": 4,
+            "score": 0.829,
+            "title": "What is Perfectionism",
+            "topic": "Perfectionism",
+            "word_count": 266
+          },
+          {
+            "rank": 5,
+            "score": 0.8258,
+            "title": "Perfectionism Rules and Assumptions",
+            "topic": "Perfectionism",
+            "word_count": 288
+          }
+        ]
+      }
+    ]
+  },
+  "summary": {
+    "mental_health_rag": {
+      "query_count": 8,
+      "average_top_score": 0.8556,
+      "average_top_word_count": 125,
+      "average_unique_titles_in_top_5": 2.75
+    },
+    "mental_health_rag_v2": {
+      "query_count": 8,
+      "average_top_score": 0.8506,
+      "average_top_word_count": 193.2,
+      "average_unique_titles_in_top_5": 3
+    }
+  },
+  "recommendation": "Use mental_health_rag_v2 for production because it uses cleaner, bounded, structure-aware CCI chunks."
+}

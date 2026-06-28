@@ -14,9 +14,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_INPUT_DIR = PROJECT_ROOT / "data" / "raw" / "CCI"
 DEFAULT_OUTPUT_PATH = PROJECT_ROOT / "data" / "processed" / "cci_information_sheets.json"
 DEFAULT_REPORT_PATH = PROJECT_ROOT / "reports" / "module_4_rag_retrieval" / "cci_corpus_summary.json"
-DEFAULT_CHUNK_SIZE = 1000
-DEFAULT_CHUNK_OVERLAP = 50
-MIN_CHUNK_SIZE = 80
+DEFAULT_MAX_CHUNK_WORDS = 400
+DEFAULT_MIN_CHUNK_WORDS = 80
 
 SENSITIVE_TOPICS = {
     "Bipolar",
@@ -79,8 +78,8 @@ def normalize_text(text: str) -> str:
         flags=re.I,
     )
     text = re.sub(r"Centre for\s+linical\s+nterventions", " ", text, flags=re.I)
-    text = re.sub(r"\s+", " ", text)
-    return text.strip()
+    paragraphs = [re.sub(r"\s+", " ", part).strip() for part in re.split(r"\n{2,}", text)]
+    return "\n\n".join(part for part in paragraphs if part)
 
 
 def extract_page_text(page: fitz.Page) -> str:
@@ -109,51 +108,85 @@ def extract_page_text(page: fitz.Page) -> str:
             right_blocks.append(block_key)
 
     ordered_blocks = sorted(full_width_blocks) + sorted(left_blocks) + sorted(right_blocks)
-    return " ".join(text for _, _, text in ordered_blocks)
+    return "\n\n".join(text for _, _, text in ordered_blocks)
 
 
 def extract_pdf_text(pdf_path: Path) -> str:
-    doc = fitz.open(pdf_path)
-    return normalize_text(" ".join(extract_page_text(page) for page in doc))
+    with fitz.open(pdf_path) as doc:
+        return normalize_text("\n\n".join(extract_page_text(page) for page in doc))
 
 
-def chunk_text(text: str, chunk_size: int, chunk_overlap: int) -> list[str]:
-    if chunk_size <= 0:
-        return [text]
-    if chunk_overlap >= chunk_size:
-        raise ValueError("chunk_overlap must be smaller than chunk_size.")
-
-    chunks = []
-    start = 0
-    while start < len(text):
-        end = min(start + chunk_size, len(text))
-
-        if end < len(text):
-            sentence_end = max(text.rfind(". ", start, end), text.rfind("? ", start, end), text.rfind("! ", start, end))
-            if sentence_end > start + int(chunk_size * 0.6):
-                end = sentence_end + 1
-
-        chunk = text[start:end].strip()
-        if chunk:
-            chunks.append(chunk)
-
-        if end >= len(text):
-            break
-        start = max(0, end - chunk_overlap)
-
-    if len(chunks) > 1 and len(chunks[-1]) < MIN_CHUNK_SIZE:
-        chunks[-2] = normalize_text(f"{chunks[-2]} {chunks[-1]}")
-        chunks.pop()
-
-    return chunks
+def count_words(text: str) -> int:
+    return len(re.findall(r"\b\w+\b", text))
 
 
-def build_documents(pdf_path: Path, chunk_size: int, chunk_overlap: int) -> list[dict[str, Any]]:
+def is_heading(text: str) -> bool:
+    return count_words(text) <= 12 and not text.rstrip().endswith((".", "?", "!", ";"))
+
+
+def split_paragraph(text: str, max_words: int) -> list[str]:
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    pieces: list[str] = []
+    current: list[str] = []
+
+    for sentence in sentences:
+        if count_words(sentence) > max_words:
+            if current:
+                pieces.append(" ".join(current))
+                current = []
+            words = sentence.split()
+            pieces.extend(" ".join(words[start : start + max_words]) for start in range(0, len(words), max_words))
+        elif current and count_words(" ".join(current + [sentence])) > max_words:
+            pieces.append(" ".join(current))
+            current = [sentence]
+        else:
+            current.append(sentence)
+
+    if current:
+        pieces.append(" ".join(current))
+    return [piece.strip() for piece in pieces if piece.strip()]
+
+
+def chunk_text(text: str, max_words: int, min_words: int) -> list[str]:
+    if min_words <= 0 or max_words < min_words:
+        raise ValueError("Chunk word limits must be positive and maximum must be at least minimum.")
+
+    paragraphs = [part.strip() for part in text.split("\n\n") if part.strip()]
+    pieces = [piece for paragraph in paragraphs for piece in split_paragraph(paragraph, max_words)]
+    chunks: list[str] = []
+    current: list[str] = []
+
+    for piece in pieces:
+        current_words = count_words(" ".join(current))
+        starts_section = is_heading(piece) and current_words >= min_words
+        exceeds_limit = current_words >= min_words and current_words + count_words(piece) > max_words
+
+        if current and (starts_section or exceeds_limit):
+            chunks.append(" ".join(current))
+            current = []
+        current.append(piece)
+
+    if current:
+        chunks.append(" ".join(current))
+
+    bounded = [piece for chunk in chunks for piece in split_paragraph(chunk, max_words)]
+    final: list[str] = []
+    for piece in bounded:
+        can_merge = final and count_words(final[-1]) + count_words(piece) <= max_words
+        if can_merge and (count_words(final[-1]) < min_words or count_words(piece) < min_words):
+            final[-1] = f"{final[-1]} {piece}"
+        else:
+            final.append(piece)
+
+    return [re.sub(r"\s+", " ", chunk).strip() for chunk in final]
+
+
+def build_documents(pdf_path: Path, max_chunk_words: int, min_chunk_words: int) -> list[dict[str, Any]]:
     topic = pdf_path.parent.name
     document_title = clean_title(pdf_path)
     text = extract_pdf_text(pdf_path)
     base_id = f"cci_{slugify(topic)}_{slugify(document_title)}"
-    chunks = chunk_text(text, chunk_size, chunk_overlap)
+    chunks = chunk_text(text, max_chunk_words, min_chunk_words)
 
     documents = []
     for index, chunk in enumerate(chunks, start=1):
@@ -176,14 +209,14 @@ def build_documents(pdf_path: Path, chunk_size: int, chunk_overlap: int) -> list
     return documents
 
 
-def build_corpus(input_dir: Path, chunk_size: int, chunk_overlap: int) -> list[dict[str, Any]]:
+def build_corpus(input_dir: Path, max_chunk_words: int, min_chunk_words: int) -> list[dict[str, Any]]:
     documents = []
     for path in sorted(input_dir.rglob("*.pdf")):
-        documents.extend(build_documents(path, chunk_size, chunk_overlap))
+        documents.extend(build_documents(path, max_chunk_words, min_chunk_words))
     return documents
 
 
-def save_report(documents: list[dict[str, Any]], report_path: Path, chunk_size: int, chunk_overlap: int) -> None:
+def save_report(documents: list[dict[str, Any]], report_path: Path, max_chunk_words: int, min_chunk_words: int) -> None:
     topic_counts = Counter(document["topic"] for document in documents)
     sensitivity_counts = Counter(document["sensitivity"] for document in documents)
     source_document_count = len({document["document_id"] for document in documents})
@@ -193,15 +226,17 @@ def save_report(documents: list[dict[str, Any]], report_path: Path, chunk_size: 
         "source": "Centre for Clinical Interventions",
         "source_document_count": source_document_count,
         "chunk_count": len(documents),
-        "chunk_size_characters": chunk_size,
-        "chunk_overlap_characters": chunk_overlap,
+        "chunking_strategy": "structure-aware PDF blocks with heading and sentence boundaries",
+        "maximum_chunk_words": max_chunk_words,
+        "minimum_target_words": min_chunk_words,
+        "exact_duplicate_chunk_count": len(documents) - len({document["text"] for document in documents}),
         "topic_counts": dict(sorted(topic_counts.items())),
         "sensitivity_counts": dict(sorted(sensitivity_counts.items())),
         "total_words": sum(word_counts),
         "min_words": min(word_counts) if word_counts else 0,
         "max_words": max(word_counts) if word_counts else 0,
         "average_words": round(sum(word_counts) / len(word_counts), 2) if word_counts else 0,
-        "output_format": "fixed-size overlapping text chunks",
+        "output_format": "structure-aware semantic text chunks",
         "fields": [
             "chunk_id",
             "document_id",
@@ -225,18 +260,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--input-dir", default=DEFAULT_INPUT_DIR, type=Path)
     parser.add_argument("--output-path", default=DEFAULT_OUTPUT_PATH, type=Path)
     parser.add_argument("--report-path", default=DEFAULT_REPORT_PATH, type=Path)
-    parser.add_argument("--chunk-size", default=DEFAULT_CHUNK_SIZE, type=int)
-    parser.add_argument("--chunk-overlap", default=DEFAULT_CHUNK_OVERLAP, type=int)
+    parser.add_argument("--max-chunk-words", default=DEFAULT_MAX_CHUNK_WORDS, type=int)
+    parser.add_argument("--min-chunk-words", default=DEFAULT_MIN_CHUNK_WORDS, type=int)
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    documents = build_corpus(args.input_dir, args.chunk_size, args.chunk_overlap)
+    documents = build_corpus(args.input_dir, args.max_chunk_words, args.min_chunk_words)
 
     args.output_path.parent.mkdir(parents=True, exist_ok=True)
     args.output_path.write_text(json.dumps(documents, indent=2, ensure_ascii=False), encoding="utf-8")
-    save_report(documents, args.report_path, args.chunk_size, args.chunk_overlap)
+    save_report(documents, args.report_path, args.max_chunk_words, args.min_chunk_words)
 
     print(f"Saved {len(documents)} CCI documents to {args.output_path}")
     print(f"Saved corpus summary to {args.report_path}")

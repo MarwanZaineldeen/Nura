@@ -13,13 +13,14 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 REPORT_DIR = PROJECT_ROOT / "reports" / "module_3_intent_classification"
 DEFAULT_MODEL = "llama-3.1-8b-instant"
 
-INTENTS = {
+INTENT_NAMES = (
     "greeting",
     "goodbye",
     "gratitude",
     "asking_mental_health_question",
     "out_of_scope",
-}
+)
+INTENTS = set(INTENT_NAMES)
 
 SYSTEM_PROMPT = """You classify user messages for a mental-health support chatbot.
 
@@ -32,28 +33,45 @@ Return exactly one intent:
 
 Rules:
 - If the message includes a mental-health concern, choose asking_mental_health_question even if it also includes greeting or thanks.
+- Use recent conversation history to resolve short or vague follow-ups.
+- If the current message continues a recent mental-health discussion, choose asking_mental_health_question.
+- Use greeting for a personal introduction and out_of_scope for a personal-context question that is not about mental health.
 - Do not infer mental-health intent from generic greetings, availability checks, or small talk unless the concern is explicit.
-- Choose out_of_scope for non-mental-health requests.
-- Return only valid JSON with keys: intent, confidence, reason.
-- confidence must be a number from 0 to 1.
+- Choose out_of_scope for non-mental-health tasks or factual requests.
+- For mixed messages that mention mental health plus another activity, classify by the real request: if the user asks how the activity may calm anxiety or mood, choose asking_mental_health_question; if they ask for unrelated instructions, choose out_of_scope.
+- Do not treat a casual mental-health word as enough by itself; look for a real emotional, coping, symptom, therapy, or wellbeing need.
+- For asking_mental_health_question, rewrite the request as a short standalone retrieval query focused on the mental-health need, not the unrelated activity details.
+- Return intent_scores for all five intents. Scores must be numbers from 0 to 1 and sum to 1.
+- Use a realistic score range. Do not default every clear prediction to 0.95.
+- interaction_type must be standalone, contextual_follow_up, or personal_context.
+- Return only valid JSON with keys: intent, intent_scores, reason, retrieval_query, contextual_follow_up, interaction_type.
 """
 
 FEW_SHOT_EXAMPLES = [
-    ("hi", "greeting", "The user is only greeting the assistant."),
-    ("hey there, are you available?", "greeting", "The user is checking availability without a mental-health concern."),
-    ("thanks for listening", "gratitude", "The user is expressing thanks."),
-    ("bye, talk later", "goodbye", "The user is ending the conversation."),
+    ("hi", "greeting", 0.92, "The user is only greeting the assistant."),
+    ("hey there, are you available?", "greeting", 0.76, "The user is checking availability."),
+    ("thanks for listening", "gratitude", 0.89, "The user is expressing thanks."),
+    ("bye, talk later", "goodbye", 0.91, "The user is ending the conversation."),
+    ("my name is Marwan", "greeting", 0.74, "The user is introducing themselves."),
     (
         "I feel anxious every night and cannot sleep",
         "asking_mental_health_question",
+        0.97,
         "The user describes anxiety and sleep difficulty.",
     ),
     (
         "hello, I feel hopeless today",
         "asking_mental_health_question",
+        0.93,
         "Mental-health concern overrides the greeting.",
     ),
-    ("what is the capital of France?", "out_of_scope", "The request is unrelated to mental health."),
+    ("what is the capital of France?", "out_of_scope", 0.99, "The request is unrelated to mental health."),
+    (
+        "how to cook pizza to reduce anxiety?",
+        "asking_mental_health_question",
+        0.72,
+        "The user is asking whether cooking can be used as a calming anxiety activity, not for a recipe alone.",
+    ),
 ]
 
 TEST_CASES = [
@@ -82,6 +100,8 @@ TEST_CASES = [
     ("summarize this business article", "out_of_scope"),
     ("build me a weekly gym routine", "out_of_scope"),
     ("translate this sentence into French", "out_of_scope"),
+    ("how to cook pizza to reduce anxiety?", "asking_mental_health_question"),
+    ("give me a pizza recipe", "out_of_scope"),
 ]
 
 
@@ -89,7 +109,7 @@ def load_env_file(path: Path = PROJECT_ROOT / ".env") -> None:
     if not path.exists():
         return
 
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for line in path.read_text(encoding="utf-8-sig").splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
@@ -127,25 +147,82 @@ class IntentClassifier:
         return self.client
 
     @staticmethod
-    def _build_user_prompt(text: str) -> str:
+    def _build_user_prompt(text: str, history: list[dict[str, str]]) -> str:
         examples = []
-        for message, intent, reason in FEW_SHOT_EXAMPLES:
+        for message, intent, main_score, reason in FEW_SHOT_EXAMPLES:
+            other_score = round((1 - main_score) / (len(INTENT_NAMES) - 1), 4)
+            scores = {name: other_score for name in INTENT_NAMES}
+            scores[intent] = main_score
             examples.append(
                 json.dumps(
                     {
                         "message": message,
                         "intent": intent,
-                        "confidence": 0.95,
+                        "intent_scores": scores,
                         "reason": reason,
+                        "retrieval_query": message if intent == "asking_mental_health_question" else "",
+                        "contextual_follow_up": False,
+                        "interaction_type": "personal_context" if message == "my name is Marwan" else "standalone",
                     },
                     ensure_ascii=False,
                 )
             )
 
+        recent_history = [
+            {"role": item.get("role", ""), "content": item.get("content", "")}
+            for item in history[-8:]
+            if item.get("role") in {"user", "assistant"} and item.get("content")
+        ]
+
         return (
             "Examples:\n"
             + "\n".join(examples)
-            + "\n\nClassify this message:\n"
+            + "\n\nContextual follow-up example:\n"
+            + json.dumps(
+                {
+                    "recent_conversation": [
+                        {"role": "user", "content": "I keep having panic attacks at work."},
+                        {"role": "assistant", "content": "That sounds frightening and exhausting."},
+                    ],
+                    "message": "What should I do when it starts?",
+                    "intent": "asking_mental_health_question",
+                    "intent_scores": {
+                        "greeting": 0.01,
+                        "goodbye": 0.01,
+                        "gratitude": 0.01,
+                        "asking_mental_health_question": 0.88,
+                        "out_of_scope": 0.09
+                    },
+                    "reason": "The message continues the recent panic-attack discussion.",
+                    "retrieval_query": "What coping steps can help when a panic attack starts at work?",
+                    "contextual_follow_up": True,
+                    "interaction_type": "contextual_follow_up",
+                },
+                ensure_ascii=False,
+            )
+            + "\n\nPersonal-context example:\n"
+            + json.dumps(
+                {
+                    "recent_conversation": [{"role": "user", "content": "My name is Marwan."}],
+                    "message": "What name did I tell you?",
+                    "intent": "out_of_scope",
+                    "intent_scores": {
+                        "greeting": 0.25,
+                        "goodbye": 0.01,
+                        "gratitude": 0.01,
+                        "asking_mental_health_question": 0.01,
+                        "out_of_scope": 0.72
+                    },
+                    "reason": "This is a personal-context question, not a mental-health request.",
+                    "retrieval_query": "",
+                    "contextual_follow_up": True,
+                    "interaction_type": "personal_context",
+                },
+                ensure_ascii=False,
+            )
+            + "\n\nRecent conversation:\n"
+            + json.dumps(recent_history, ensure_ascii=False)
+            + "\n\nClassify the current message:\n"
             + json.dumps({"message": text}, ensure_ascii=False)
         )
 
@@ -158,35 +235,59 @@ class IntentClassifier:
         return json.loads(content)
 
     @staticmethod
-    def _normalize(result: dict[str, Any]) -> dict[str, Any]:
-        intent = str(result.get("intent", "")).strip()
-        invalid_intent = intent not in INTENTS
-        if intent not in INTENTS:
-            intent = "out_of_scope"
+    def _normalize(result: dict[str, Any], original_text: str) -> dict[str, Any]:
+        declared_intent = str(result.get("intent", "")).strip()
+        raw_scores = result.get("intent_scores", {})
+        scores = {}
+        for name in INTENT_NAMES:
+            try:
+                scores[name] = max(0.0, float(raw_scores.get(name, 0.0)))
+            except (TypeError, ValueError, AttributeError):
+                scores[name] = 0.0
 
-        try:
-            confidence = float(result.get("confidence", 0.0))
-        except (TypeError, ValueError):
+        total = sum(scores.values())
+        if total > 0:
+            scores = {name: round(value / total, 4) for name, value in scores.items()}
+            intent = max(scores, key=scores.get)
+            confidence = scores[intent]
+            ranked_scores = sorted(scores.values(), reverse=True)
+            confidence_margin = round(ranked_scores[0] - ranked_scores[1], 4)
+        else:
+            intent = declared_intent if declared_intent in INTENTS else "out_of_scope"
             confidence = 0.0
+            confidence_margin = 0.0
 
-        confidence = max(0.0, min(confidence, 1.0))
-        if invalid_intent:
-            confidence = 0.0
         reason = str(result.get("reason", "")).strip()
+        retrieval_query = str(result.get("retrieval_query", "")).strip()
+        if intent == "asking_mental_health_question" and not retrieval_query:
+            retrieval_query = original_text
+        interaction_type = str(result.get("interaction_type", "standalone")).strip()
+        if interaction_type not in {"standalone", "contextual_follow_up", "personal_context"}:
+            interaction_type = "standalone"
 
         return {
             "intent": intent,
             "confidence": confidence,
+            "confidence_margin": confidence_margin,
+            "intent_scores": scores,
             "reason": reason or "No reason provided.",
+            "retrieval_query": retrieval_query,
+            "contextual_follow_up": result.get("contextual_follow_up") is True,
+            "interaction_type": interaction_type,
         }
 
-    def classify(self, text: str) -> dict[str, Any]:
+    def classify(self, text: str, history: list[dict[str, str]] | None = None) -> dict[str, Any]:
         clean_text = text.strip()
         if not clean_text:
             return {
                 "intent": "out_of_scope",
                 "confidence": 0.0,
+                "confidence_margin": 0.0,
+                "intent_scores": {name: 0.0 for name in INTENT_NAMES},
                 "reason": "Empty message.",
+                "retrieval_query": "",
+                "contextual_follow_up": False,
+                "interaction_type": "standalone",
             }
 
         client = self._get_client()
@@ -194,21 +295,27 @@ class IntentClassifier:
             model=self.model,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": self._build_user_prompt(clean_text)},
+                {"role": "user", "content": self._build_user_prompt(clean_text, history or [])},
             ],
             temperature=self.temperature,
-            max_completion_tokens=180,
+            max_completion_tokens=300,
             top_p=1,
+            response_format={"type": "json_object"},
         )
 
         content = completion.choices[0].message.content or "{}"
         try:
-            return self._normalize(self._parse_json(content))
+            return self._normalize(self._parse_json(content), clean_text)
         except (json.JSONDecodeError, TypeError, ValueError):
             return {
                 "intent": "out_of_scope",
                 "confidence": 0.0,
+                "confidence_margin": 0.0,
+                "intent_scores": {name: 0.0 for name in INTENT_NAMES},
                 "reason": "The model returned an invalid JSON response.",
+                "retrieval_query": "",
+                "contextual_follow_up": False,
+                "interaction_type": "standalone",
             }
 
     def evaluate(self, test_cases: list[tuple[str, str]] = TEST_CASES) -> dict[str, Any]:
@@ -226,6 +333,8 @@ class IntentClassifier:
                     "expected_intent": expected,
                     "predicted_intent": predicted,
                     "confidence": prediction["confidence"],
+                    "confidence_margin": prediction["confidence_margin"],
+                    "interaction_type": prediction["interaction_type"],
                     "correct": is_correct,
                     "reason": prediction["reason"],
                 }
@@ -245,6 +354,8 @@ class IntentClassifier:
                     "expected_intent",
                     "predicted_intent",
                     "confidence",
+                    "confidence_margin",
+                    "interaction_type",
                     "correct",
                     "reason",
                 ],
@@ -255,6 +366,7 @@ class IntentClassifier:
         summary = {
             "model": self.model,
             "method": "few-shot LLM prompting with strict JSON output",
+            "confidence_method": "normalized five-class LLM score distribution with top-two margin",
             "temperature": self.temperature,
             "intents": sorted(INTENTS),
             "accuracy": evaluation["accuracy"],
