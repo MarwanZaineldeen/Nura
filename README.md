@@ -57,6 +57,20 @@ User message
 
 For simple English greetings, thanks, goodbyes, and obvious standalone out-of-scope tasks, Nura uses a fast direct response and skips final LLM generation. This keeps casual turns responsive while preserving the full RAG flow for real support questions.
 
+## End-To-End Runtime Flow
+
+1. The browser sends the current message, selected support style, fixed `top_k=5`, and recent chat history to FastAPI.
+2. FastAPI validates the request and reuses one cached `ChatbotPipeline` instance for efficiency.
+3. The safety router runs first. Crisis-like messages skip normal retrieval and generation and return immediate support guidance.
+4. For non-crisis messages, language detection, emotion classification, and intent classification run in parallel.
+5. Simple English social messages use a fast Nura response, which keeps casual turns responsive and avoids unnecessary LLM calls.
+6. If the message is a mental-health question, the multilingual E5 embedder converts the retrieval query into a vector and searches Qdrant Cloud.
+7. Retrieval can search both sources or focus on one support style: Balanced Care, Learn and Cope, or Reflective Talk.
+8. The final response generator receives a compact state: module outputs, recent history, and up to 5 retrieved passages trimmed for prompt efficiency.
+9. The final LLM reviews language, emotion, and intent again before answering, so it can correct earlier module mistakes when needed.
+10. Nura answers in the user's language, keeps a supportive tone, and only shows clickable follow-up suggestions for mental-health support answers.
+11. The production UI receives only the final answer and suggestions. The developer UI can opt into the full diagnostic state for demos and debugging.
+
 ## Modules
 
 ### Module 1 - Language Detection
@@ -224,24 +238,33 @@ Benchmark integrated chatbot latency:
 
 The Dockerfile uses the platform `PORT` environment variable. It defaults to `7860` for Hugging Face Spaces, while Render can still inject its own `PORT`. Secrets are expected to come from the hosting provider environment, not from Git.
 
-Required deployment variables:
+Recommended Hugging Face Space secrets:
 
 ```text
 GROQ_API_KEY
 GOOGLE_API_KEY
 QDRANT_URL
 QDRANT_API_KEY
-QDRANT_COLLECTION
-LANGUAGE_MODEL_REPO_ID
-LANGUAGE_MODEL_FILENAME
-EMOTION_MODEL_ID
-GROQ_RESPONSE_MAX_TOKENS
-GROQ_INTENT_FALLBACK_MODELS
-GROQ_RESPONSE_FALLBACK_MODELS
-GROQ_REQUEST_TIMEOUT_SECONDS
-NURA_WARMUP_ON_START
-NURA_WARMUP_RETRIEVAL
 ```
+
+Recommended Hugging Face Space variables:
+
+```text
+LANGUAGE_MODEL_REPO_ID=your_hf_username/language-detector-model
+LANGUAGE_MODEL_FILENAME=saved_lang_model.pkl
+EMOTION_MODEL_ID=your_hf_username/emotion-detector-model
+QDRANT_COLLECTION=mental_health_rag_v2
+GROQ_RESPONSE_MAX_TOKENS=500
+LLM_CONTEXT_TOP_K=5
+LLM_CONTEXT_MAX_CHARS=700
+LLM_HISTORY_MESSAGES=8
+GROQ_REQUEST_TIMEOUT_SECONDS=8
+GROQ_MAX_RETRIES=0
+NURA_WARMUP_ON_START=false
+NURA_WARMUP_RETRIEVAL=false
+```
+
+Optional variables can be omitted unless you want to override defaults: `GROQ_RESPONSE_TEMPERATURE`, `GROQ_INTENT_MODEL`, `GROQ_RESPONSE_MODEL`, `GOOGLE_INTENT_MODEL`, `GOOGLE_RESPONSE_MODEL`, and `GOOGLE_REQUEST_TIMEOUT_SECONDS`. Keep Groq fallback model lists empty unless another Groq model has been tested with the strict JSON prompts.
 
 ## Safety Note
 
